@@ -208,37 +208,47 @@ shap.decision_plot(
     show=False
 )
 ax = plt.gca()
+# Lese die y-Tick-Labels aus – das sind genau die Features in Plot-Reihenfolge, filter empty
+raw_order = [tick.get_text() for tick in ax.get_yticklabels()]
+order = [feat for feat in raw_order if feat]
+# Initialize cumulative sums for means and std deviations
+cumulative_mean = shap_values_right_class[class_id]['base value']
+cumulative_neg_std = shap_values_right_class[class_id]['base value']
+cumulative_pos_std = shap_values_right_class[class_id]['base value']
+
 # Overlay feature mean values as markers
 means = class_feature_distribution[class_id]
-for idx, feature in enumerate(feature_names):
-    mean_val = means[feature]['mean']
-    std_val = means[feature]['std']
-    base = shap_values_right_class[class_id]['base value']
-    # Plot mean marker
+for feature in order:
+    # find corresponding y-position
+    y_pos = raw_order.index(feature)
+    # Update cumulative mean and plot
+    cumulative_mean += means[feature]['mean']
+    print(f'Mean: {cumulative_mean}')
     ax.scatter(
-        mean_val + base,
-        idx,
+        cumulative_mean,
+        y_pos,
         marker='D',
-        c='Black',
-        label='Mittelwerte' if idx == 0 else '_nolegend_'
+        label='Cumulative Mean' if y_pos == raw_order.index(order[0]) else '_nolegend_'
     )
-    # Plot negative standard deviation marker
+    # Update cumulative negative std and plot
+    cumulative_neg_std -= means[feature]['std']
+    print(f'neg std: {cumulative_neg_std}')
     ax.scatter(
-        -std_val + base,
-        idx,
+        cumulative_neg_std,
+        y_pos,
         marker='X',
-        c='C1',
-        label='-1 Stdabw' if idx == 0 else '_nolegend_'
+        label='Cumulative -1 Std' if y_pos == raw_order.index(order[0]) else '_nolegend_'
     )
-    # Plot positive standard deviation marker
+    # Update cumulative positive std and plot
+    cumulative_pos_std += means[feature]['std']
+    print(f' pos std: {cumulative_pos_std}')
     ax.scatter(
-        std_val + base,
-        idx,
+        cumulative_pos_std,
+        y_pos,
         marker='o',
-        c='C2',
-        label='+1 Stdabw' if idx == 0 else '_nolegend_'
+        label='Cumulative +1 Std' if y_pos == raw_order.index(order[0]) else '_nolegend_'
     )
-ax.legend(loc='upper right')
+ax.legend(loc='upper left')
 ax.set_title(f"SHAP Decision Plot for {class_id} with Feature Means", fontsize=26)
 plt.show()
 
