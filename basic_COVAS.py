@@ -188,4 +188,39 @@ for class_id in class_labels:
 
 # %%
 ### Section 9: Decision plot (SHAP)
-#T.B.I
+height_in_inches = 10 #placeholder
+width_in_pixels = 2926
+DPI = 300
+# Convert width from pixels to inches
+width_in_inches = width_in_pixels / DPI
+
+class_id = 'benign' # placeholder
+
+# Prepare figure with desired size
+plt.figure(figsize=(width_in_inches, height_in_inches))
+# Generate SHAP decision plot without immediate display
+shap.decision_plot(
+    shap_values_right_class[class_id]['base value'],
+    shap_values_right_class[class_id]['values'],
+    X_test,
+    feature_names,
+    link="logit",
+    show=False
+)
+ax = plt.gca()
+# Overlay feature mean values as markers
+means = class_feature_distribution[class_id]
+for idx, feature in enumerate(feature_names):
+    mean_val = means[feature]['mean']
+    ax.scatter(
+        mean_val + shap_values_right_class[class_id]['base value'],
+        idx,
+        marker='D',
+        c='Black',
+        label='Mittelwerte' if idx == 0 else '_nolegend_'
+    )
+ax.legend(loc='upper right')
+ax.set_title(f"SHAP Decision Plot for {class_id} with Feature Means", fontsize=26)
+plt.show()
+
+# %%
