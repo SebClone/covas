@@ -212,12 +212,31 @@ ax = plt.gca()
 means = class_feature_distribution[class_id]
 for idx, feature in enumerate(feature_names):
     mean_val = means[feature]['mean']
+    std_val = means[feature]['std']
+    base = shap_values_right_class[class_id]['base value']
+    # Plot mean marker
     ax.scatter(
-        mean_val + shap_values_right_class[class_id]['base value'],
+        mean_val + base,
         idx,
         marker='D',
         c='Black',
         label='Mittelwerte' if idx == 0 else '_nolegend_'
+    )
+    # Plot negative standard deviation marker
+    ax.scatter(
+        -std_val + base,
+        idx,
+        marker='X',
+        c='C1',
+        label='-1 Stdabw' if idx == 0 else '_nolegend_'
+    )
+    # Plot positive standard deviation marker
+    ax.scatter(
+        std_val + base,
+        idx,
+        marker='o',
+        c='C2',
+        label='+1 Stdabw' if idx == 0 else '_nolegend_'
     )
 ax.legend(loc='upper right')
 ax.set_title(f"SHAP Decision Plot for {class_id} with Feature Means", fontsize=26)
