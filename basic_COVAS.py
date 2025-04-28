@@ -204,52 +204,52 @@ shap.decision_plot(
     shap_values_right_class[class_id]['values'],
     X_test,
     feature_names,
-    link="logit",
-    show=False
+    show=False,
+    ignore_warnings=True
 )
 ax = plt.gca()
-# Lese die y-Tick-Labels aus – das sind genau die Features in Plot-Reihenfolge, filter empty
-raw_order = [tick.get_text() for tick in ax.get_yticklabels()]
-order = [feat for feat in raw_order if feat]
 # Initialize cumulative sums for means and std deviations
 cumulative_mean = shap_values_right_class[class_id]['base value']
 cumulative_neg_std = shap_values_right_class[class_id]['base value']
 cumulative_pos_std = shap_values_right_class[class_id]['base value']
 
-# Overlay feature mean values as markers
-means = class_feature_distribution[class_id]
-for feature in order:
-    # find corresponding y-position
-    y_pos = raw_order.index(feature)
-    # Update cumulative mean and plot
-    cumulative_mean += means[feature]['mean']
-    print(f'Mean: {cumulative_mean}')
+
+ax = plt.gca()
+# Get the actual plot order from the decision_plot
+order = [tick.get_text() for tick in ax.get_yticklabels() if tick.get_text()]
+shap_vals = shap_values_right_class[class_id]['values'][:, [feature_names.index(f) for f in order]]
+
+# Compute cumulative contributions per sample
+base = shap_values_right_class[class_id]['base value']
+cum_paths = base + np.cumsum(shap_vals, axis=1)
+
+# Compute mean and std at each feature index
+mean_path = np.mean(cum_paths, axis=0)
+std_path = np.std(cum_paths, axis=0)
+
+for idx, feature in enumerate(order):
+    # Plot mean cumulative SHAP
     ax.scatter(
-        cumulative_mean,
-        y_pos,
+        mean_path[idx],
+        idx,
         marker='D',
-        label='Cumulative Mean' if y_pos == raw_order.index(order[0]) else '_nolegend_'
+        s=50,
+        zorder=5,
+        color='blue',
+        label='Mean Path' if idx == 0 else '_nolegend_'
     )
-    # Update cumulative negative std and plot
-    cumulative_neg_std -= means[feature]['std']
-    print(f'neg std: {cumulative_neg_std}')
+    # Plot symmetric std bounds
     ax.scatter(
-        cumulative_neg_std,
-        y_pos,
+        [mean_path[idx] - std_path[idx], mean_path[idx] + std_path[idx]],
+        [idx, idx],
         marker='X',
-        label='Cumulative -1 Std' if y_pos == raw_order.index(order[0]) else '_nolegend_'
-    )
-    # Update cumulative positive std and plot
-    cumulative_pos_std += means[feature]['std']
-    print(f' pos std: {cumulative_pos_std}')
-    ax.scatter(
-        cumulative_pos_std,
-        y_pos,
-        marker='o',
-        label='Cumulative +1 Std' if y_pos == raw_order.index(order[0]) else '_nolegend_'
+        s=50,
+        zorder=5,
+        color='orange',
+        label='±1 Std' if idx == 0 else '_nolegend_'
     )
 ax.legend(loc='upper left')
-ax.set_title(f"SHAP Decision Plot for {class_id} with Feature Means", fontsize=26)
+ax.set_title(f"SHAP Decision Plot for {class_id} with Mean Path", fontsize=26)
 plt.show()
 
 # %%
