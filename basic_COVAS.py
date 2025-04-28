@@ -227,28 +227,104 @@ cum_paths = base + np.cumsum(shap_vals, axis=1)
 mean_path = np.mean(cum_paths, axis=0)
 std_path = np.std(cum_paths, axis=0)
 
+#
+# Connect mean path points with a line
+ax.plot(mean_path, range(len(order)), linestyle='-', linewidth=2, zorder=4, color='black', label='Mean Path Line')
+# Connect ±1 Std bounds
+ax.plot(mean_path - std_path, range(len(order)), linestyle='--', linewidth=1, zorder=3, color='darkgreen', label='±1 Std Line')
+ax.plot(mean_path + std_path, range(len(order)), linestyle='--', linewidth=1, zorder=3, color='darkgreen', label='_nolegend_')
+# Connect ±2 Std bounds
+ax.plot(mean_path - 2*std_path, range(len(order)), linestyle=':', linewidth=1, zorder=2, color='darkorange', label='±2 Std Line')
+ax.plot(mean_path + 2*std_path, range(len(order)), linestyle=':', linewidth=1, zorder=2, color='darkorange', label='_nolegend_')
+# Connect ±3 Std bounds
+ax.plot(mean_path - 3*std_path, range(len(order)), linestyle='-.', linewidth=1, zorder=1, color='purple', label='±3 Std Line')
+ax.plot(mean_path + 3*std_path, range(len(order)), linestyle='-.', linewidth=1, zorder=1, color='purple', label='_nolegend_')
+
 for idx, feature in enumerate(order):
     # Plot mean cumulative SHAP
-    ax.scatter(
-        mean_path[idx],
-        idx,
-        marker='D',
-        s=50,
-        zorder=5,
-        color='blue',
-        label='Mean Path' if idx == 0 else '_nolegend_'
-    )
+    if idx == 0:
+        ax.scatter(
+            mean_path[idx],
+            idx,
+            marker='D',
+            s=50,
+            zorder=5,
+            color='black',
+            label='Mean Path'
+        )
+    else:
+        ax.scatter(
+            mean_path[idx],
+            idx,
+            marker='D',
+            s=50,
+            zorder=5,
+            color='black'
+        )
     # Plot symmetric std bounds
-    ax.scatter(
-        [mean_path[idx] - std_path[idx], mean_path[idx] + std_path[idx]],
-        [idx, idx],
-        marker='X',
-        s=50,
-        zorder=5,
-        color='orange',
-        label='±1 Std' if idx == 0 else '_nolegend_'
-    )
-ax.legend(loc='upper left')
+    if idx == 0:
+        ax.scatter(
+            [mean_path[idx] - std_path[idx], mean_path[idx] + std_path[idx]],
+            [idx, idx],
+            marker='X',
+            s=50,
+            zorder=5,
+            color='darkgreen',
+            label='±1 Std'
+        )
+    else:
+        ax.scatter(
+            [mean_path[idx] - std_path[idx], mean_path[idx] + std_path[idx]],
+            [idx, idx],
+            marker='X',
+            s=50,
+            zorder=5,
+            color='darkgreen'
+        )
+    # Plot ±2 Std bounds
+    if idx == 0:
+        ax.scatter(
+            [mean_path[idx] - 2*std_path[idx], mean_path[idx] + 2*std_path[idx]],
+            [idx, idx],
+            marker='s',
+            s=50,
+            zorder=5,
+            color='darkorange',
+            label='±2 Std'
+        )
+    else:
+        ax.scatter(
+            [mean_path[idx] - 2*std_path[idx], mean_path[idx] + 2*std_path[idx]],
+            [idx, idx],
+            marker='s',
+            s=50,
+            zorder=5,
+            color='darkorange'
+        )
+    # Plot ±3 Std bounds
+    if idx == 0:
+        ax.scatter(
+            [mean_path[idx] - 3*std_path[idx], mean_path[idx] + 3*std_path[idx]],
+            [idx, idx],
+            marker='^',
+            s=50,
+            zorder=5,
+            color='purple',
+            label='±3 Std'
+        )
+    else:
+        ax.scatter(
+            [mean_path[idx] - 3*std_path[idx], mean_path[idx] + 3*std_path[idx]],
+            [idx, idx],
+            marker='^',
+            s=50,
+            zorder=5,
+            color='purple'
+        )
+# Create a legend without duplicate labels
+handles, labels = ax.get_legend_handles_labels()
+by_label = dict(zip(labels, handles))
+ax.legend(by_label.values(), by_label.keys(), loc='upper left')
 ax.set_title(f"SHAP Decision Plot for {class_id} with Mean Path", fontsize=26)
 plt.show()
 
