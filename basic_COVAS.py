@@ -238,41 +238,42 @@ std_path = np.std(cum_paths, axis=0)
 
 # Connect mean path points with a line
 # Connect mean path points with a line
+# Use new blue tone for mean path line
 if plot_mean:
-    ax.plot(mean_path, range(len(order)), linestyle='-', linewidth=2, zorder=4, color='black', label='Mean Path Line')
+    ax.plot(mean_path, range(len(order)), linestyle='-', linewidth=2, zorder=4, color='#333333', label='Mean Path Line')
 # Connect ±1 Std bounds
 if 1 in std_levels:
-    ax.plot(mean_path - std_path, range(len(order)), linestyle='--', linewidth=1, zorder=3, color='darkgreen', label='±1 Std Line')
-    ax.plot(mean_path + std_path, range(len(order)), linestyle='--', linewidth=1, zorder=3, color='darkgreen', label='_nolegend_')
+    ax.plot(mean_path - std_path, range(len(order)), linestyle='--', linewidth=1, zorder=3, color='#82A582', label='±1 Std Line')
+    ax.plot(mean_path + std_path, range(len(order)), linestyle='--', linewidth=1, zorder=3, color='#82A582', label='_nolegend_')
     ax.fill_betweenx(
         range(len(order)),
         mean_path - std_path,
         mean_path + std_path,
-        color='darkgreen',
+        color='#82A582',
         alpha=0.2,
         label='68% Perzentil'
     )
 # Connect ±2 Std bounds
 if 2 in std_levels:
-    ax.plot(mean_path - 2*std_path, range(len(order)), linestyle=':', linewidth=1, zorder=2, color='darkorange', label='±2 Std Line')
-    ax.plot(mean_path + 2*std_path, range(len(order)), linestyle=':', linewidth=1, zorder=2, color='darkorange', label='_nolegend_')
+    ax.plot(mean_path - 2*std_path, range(len(order)), linestyle=':', linewidth=1, zorder=2, color='#517551', label='±2 Std Line')
+    ax.plot(mean_path + 2*std_path, range(len(order)), linestyle=':', linewidth=1, zorder=2, color='#517551', label='_nolegend_')
     ax.fill_betweenx(
         range(len(order)),
         mean_path - 2*std_path,
         mean_path + 2*std_path,
-        color='darkorange',
+        color='#517551',
         alpha=0.2,
         label='95% Perzentil'
     )
 # Connect ±3 Std bounds
 if 3 in std_levels:
-    ax.plot(mean_path - 3*std_path, range(len(order)), linestyle='-.', linewidth=1, zorder=1, color='purple', label='±3 Std Line')
-    ax.plot(mean_path + 3*std_path, range(len(order)), linestyle='-.', linewidth=1, zorder=1, color='purple', label='_nolegend_')
+    ax.plot(mean_path - 3*std_path, range(len(order)), linestyle='-.', linewidth=1, zorder=1, color='#2F4F2F', label='±3 Std Line')
+    ax.plot(mean_path + 3*std_path, range(len(order)), linestyle='-.', linewidth=1, zorder=1, color='#2F4F2F', label='_nolegend_')
     ax.fill_betweenx(
         range(len(order)),
         mean_path - 3*std_path,
         mean_path + 3*std_path,
-        color='purple',
+        color='#2F4F2F',
         alpha=0.2,
         label='99.7% Perzentil'
     )
@@ -287,7 +288,7 @@ for idx, feature in enumerate(order):
                 marker='D',
                 s=50,
                 zorder=5,
-                color='black',
+                color='#333333',
                 label='Mean Path'
             )
         else:
@@ -297,7 +298,7 @@ for idx, feature in enumerate(order):
                 marker='D',
                 s=50,
                 zorder=5,
-                color='black'
+                color='#333333'
             )
     # Plot symmetric std bounds
     if 1 in std_levels:
@@ -308,7 +309,7 @@ for idx, feature in enumerate(order):
                 marker='X',
                 s=50,
                 zorder=5,
-                color='darkgreen',
+                color='#82A582',
                 label='±1 Std'
             )
         else:
@@ -318,7 +319,7 @@ for idx, feature in enumerate(order):
                 marker='X',
                 s=50,
                 zorder=5,
-                color='darkgreen'
+                color='#82A582'
             )
     # Plot ±2 Std bounds
     if 2 in std_levels:
@@ -329,7 +330,7 @@ for idx, feature in enumerate(order):
                 marker='s',
                 s=50,
                 zorder=5,
-                color='darkorange',
+                color='#517551',
                 label='±2 Std'
             )
         else:
@@ -339,7 +340,7 @@ for idx, feature in enumerate(order):
                 marker='s',
                 s=50,
                 zorder=5,
-                color='darkorange'
+                color='#517551'
             )
     # Plot ±3 Std bounds
     if 3 in std_levels:
@@ -350,7 +351,7 @@ for idx, feature in enumerate(order):
                 marker='^',
                 s=50,
                 zorder=5,
-                color='purple',
+                color='#2F4F2F',
                 label='±3 Std'
             )
         else:
@@ -360,7 +361,7 @@ for idx, feature in enumerate(order):
                 marker='^',
                 s=50,
                 zorder=5,
-                color='purple'
+                color='#2F4F2F'
             )
 # Create a legend without duplicate labels
 handles, labels = ax.get_legend_handles_labels()
