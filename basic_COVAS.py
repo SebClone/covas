@@ -188,202 +188,224 @@ for class_id in class_labels:
 
 # %%
 ### Section 9: Decision plot (SHAP)
-# Configuration: which elements to plot
-scatter_levels = ['none']  # options: 'none', 'all', 'mean', '1 std', '2 std', '3 std'
-line_levels = ['mean', '2 std']     # options: same as scatter_levels
-fill_levels = ['95%']                   # options: '68%', '95%', '99%'
+def custom_decision_plot(shap_base, shap_vals, X_test, feature_names,
+                         scatter_levels=None, line_levels=None, fill_levels=None):
+    """
+    Custom SHAP decision plot with optional scatter, line, and percentile fills.
+    """
+    if scatter_levels is None and line_levels is None and fill_levels is None:
+        shap.decision_plot(shap_base, shap_vals, X_test, feature_names, show=True)
+        return
+    if scatter_levels is None: scatter_levels = []
+    if line_levels is None: line_levels = []
+    if fill_levels is None: fill_levels = []
 
-# std_levels = 'all'  # <-- modify this to a list like [1,2,3], 'all', or 'none'
+    # Configuration: which elements to plot
+    scatter_levels = scatter_levels
+    line_levels = line_levels
+    fill_levels = fill_levels
 
-# Determine std_levels numeric list based on line_levels
-std_map = {'1 std': 1, '2 std': 2, '3 std': 3}
-if 'all' in line_levels:
-    std_levels = [1, 2, 3]
-else:
-    std_levels = [std_map[s] for s in line_levels if s in std_map]
+    # std_levels = 'all'  # <-- modify this to a list like [1,2,3], 'all', or 'none'
 
-plot_scatter = {'mean': 'mean' in scatter_levels}
-plot_scatter.update({f'{i} std': (f'{i} std' in scatter_levels) for i in [1,2,3]})
+    # Determine std_levels numeric list based on line_levels
+    std_map = {'1 std': 1, '2 std': 2, '3 std': 3}
+    if 'all' in line_levels:
+        std_levels = [1, 2, 3]
+    else:
+        std_levels = [std_map[s] for s in line_levels if s in std_map]
 
-plot_fill = {'1': '68%' in fill_levels, '2': '95%' in fill_levels, '3': '99%' in fill_levels}
+    plot_scatter = {'mean': 'mean' in scatter_levels}
+    plot_scatter.update({f'{i} std': (f'{i} std' in scatter_levels) for i in [1,2,3]})
 
-height_in_inches = 10 #placeholder
-width_in_pixels = 2926
-DPI = 300
-# Convert width from pixels to inches
-width_in_inches = width_in_pixels / DPI
+    plot_fill = {'1': '68%' in fill_levels, '2': '95%' in fill_levels, '3': '99%' in fill_levels}
 
-class_id = 'benign' # placeholder
+    height_in_inches = 10 #placeholder
+    width_in_pixels = 2926
+    DPI = 300
+    # Convert width from pixels to inches
+    width_in_inches = width_in_pixels / DPI
 
-# Prepare figure with desired size
-plt.figure(figsize=(width_in_inches, height_in_inches))
-# Generate SHAP decision plot without immediate display
-shap.decision_plot(
-    shap_values_right_class[class_id]['base value'],
-    shap_values_right_class[class_id]['values'],
-    X_test,
-    feature_names,
-    show=False,
-    ignore_warnings=True
-)
-ax = plt.gca()
-# Initialize cumulative sums for means and std deviations
-cumulative_mean = shap_values_right_class[class_id]['base value']
-cumulative_neg_std = shap_values_right_class[class_id]['base value']
-cumulative_pos_std = shap_values_right_class[class_id]['base value']
-
-
-ax = plt.gca()
-# Get the actual plot order from the decision_plot
-order = [tick.get_text() for tick in ax.get_yticklabels() if tick.get_text()]
-shap_vals = shap_values_right_class[class_id]['values'][:, [feature_names.index(f) for f in order]]
-
-# Compute cumulative contributions per sample
-base = shap_values_right_class[class_id]['base value']
-cum_paths = base + np.cumsum(shap_vals, axis=1)
-
-# Compute mean and std at each feature index
-mean_path = np.mean(cum_paths, axis=0)
-std_path = np.std(cum_paths, axis=0)
-
-# Connect mean path points with a line
-# Connect mean path points with a line
-# Use new blue tone for mean path line
-if 'mean' in line_levels:
-    ax.plot(mean_path, range(len(order)), linestyle='-', linewidth=2, zorder=4, color='#333333', label='Mean Path Line')
-# Connect ±1 Std bounds
-if 1 in std_levels:
-    ax.plot(mean_path - std_path, range(len(order)), linestyle='--', linewidth=2, zorder=3, color='#82A582', label='±1 Std Line')
-    ax.plot(mean_path + std_path, range(len(order)), linestyle='--', linewidth=2, zorder=3, color='#82A582', label='_nolegend_')
-if 1 in std_levels and plot_fill['1']:
-    ax.fill_betweenx(
-        range(len(order)),
-        mean_path - std_path,
-        mean_path + std_path,
-        color='#82A582',
-        alpha=0.4,
-        zorder=4,
-        label='68% Perzentil'
+    # Prepare figure with desired size
+    plt.figure(figsize=(width_in_inches, height_in_inches))
+    # Generate SHAP decision plot without immediate display
+    shap.decision_plot(
+        shap_base,
+        shap_vals,
+        X_test,
+        feature_names,
+        show=False,
+        ignore_warnings=True
     )
-# Connect ±2 Std bounds
-if 2 in std_levels:
-    ax.plot(mean_path - 2*std_path, range(len(order)), linestyle=':', linewidth=2, zorder=2, color='#517551', label='±2 Std Line')
-    ax.plot(mean_path + 2*std_path, range(len(order)), linestyle=':', linewidth=2, zorder=2, color='#517551', label='_nolegend_')
-if 2 in std_levels and plot_fill['2']:
-    ax.fill_betweenx(
-        range(len(order)),
-        mean_path - 2*std_path,
-        mean_path + 2*std_path,
-        color='#517551',
-        alpha=0.4,
-        zorder=4,
-        label='95% Perzentil'
-    )
-# Connect ±3 Std bounds
-if 3 in std_levels:
-    ax.plot(mean_path - 3*std_path, range(len(order)), linestyle='-.', linewidth=2, zorder=1, color='#2F4F2F', label='±3 Std Line')
-    ax.plot(mean_path + 3*std_path, range(len(order)), linestyle='-.', linewidth=2, zorder=1, color='#2F4F2F', label='_nolegend_')
-if 3 in std_levels and plot_fill['3']:
-    ax.fill_betweenx(
-        range(len(order)),
-        mean_path - 3*std_path,
-        mean_path + 3*std_path,
-        color='#2F4F2F',
-        alpha=0.4,
-        zorder=4,
-        label='99.7% Perzentil'
-    )
+    ax = plt.gca()
+    # Initialize cumulative sums for means and std deviations
+    cumulative_mean = shap_base
+    cumulative_neg_std = shap_base
+    cumulative_pos_std = shap_base
 
-for idx, feature in enumerate(order):
-    # Plot mean cumulative SHAP
-    if plot_scatter['mean']:
-        if idx == 0:
-            ax.scatter(
-                mean_path[idx],
-                idx,
-                marker='D',
-                s=50,
-                zorder=5,
-                color='#333333',
-                label='Mean Path'
-            )
-        else:
-            ax.scatter(
-                mean_path[idx],
-                idx,
-                marker='D',
-                s=50,
-                zorder=5,
-                color='#333333'
-            )
-    # Plot symmetric std bounds
-    if 1 in std_levels and plot_scatter['1 std']:
-        if idx == 0:
-            ax.scatter(
-                [mean_path[idx] - std_path[idx], mean_path[idx] + std_path[idx]],
-                [idx, idx],
-                marker='X',
-                s=50,
-                zorder=5,
-                color='#82A582',
-                label='±1 Std'
-            )
-        else:
-            ax.scatter(
-                [mean_path[idx] - std_path[idx], mean_path[idx] + std_path[idx]],
-                [idx, idx],
-                marker='X',
-                s=50,
-                zorder=5,
-                color='#82A582'
-            )
-    # Plot ±2 Std bounds
-    if 2 in std_levels and plot_scatter['2 std']:
-        if idx == 0:
-            ax.scatter(
-                [mean_path[idx] - 2*std_path[idx], mean_path[idx] + 2*std_path[idx]],
-                [idx, idx],
-                marker='s',
-                s=50,
-                zorder=5,
-                color='#517551',
-                label='±2 Std'
-            )
-        else:
-            ax.scatter(
-                [mean_path[idx] - 2*std_path[idx], mean_path[idx] + 2*std_path[idx]],
-                [idx, idx],
-                marker='s',
-                s=50,
-                zorder=5,
-                color='#517551'
-            )
-    # Plot ±3 Std bounds
-    if 3 in std_levels and plot_scatter['3 std']:
-        if idx == 0:
-            ax.scatter(
-                [mean_path[idx] - 3*std_path[idx], mean_path[idx] + 3*std_path[idx]],
-                [idx, idx],
-                marker='^',
-                s=50,
-                zorder=5,
-                color='#2F4F2F',
-                label='±3 Std'
-            )
-        else:
-            ax.scatter(
-                [mean_path[idx] - 3*std_path[idx], mean_path[idx] + 3*std_path[idx]],
-                [idx, idx],
-                marker='^',
-                s=50,
-                zorder=5,
-                color='#2F4F2F'
-            )
-# Create a legend without duplicate labels
-handles, labels = ax.get_legend_handles_labels()
-by_label = dict(zip(labels, handles))
-ax.legend(by_label.values(), by_label.keys(), loc='upper left')
-ax.set_title(f"SHAP Decision Plot for {class_id} with Mean Path", fontsize=26)
-plt.show()
+
+    ax = plt.gca()
+    # Get the actual plot order from the decision_plot
+    order = [tick.get_text() for tick in ax.get_yticklabels() if tick.get_text()]
+    shap_vals_ordered = shap_vals[:, [feature_names.index(f) for f in order]]
+
+    # Compute cumulative contributions per sample
+    base = shap_base
+    cum_paths = base + np.cumsum(shap_vals_ordered, axis=1)
+
+    # Compute mean and std at each feature index
+    mean_path = np.mean(cum_paths, axis=0)
+    std_path = np.std(cum_paths, axis=0)
+
+    # Connect mean path points with a line
+    # Use new blue tone for mean path line
+    if 'mean' in line_levels:
+        ax.plot(mean_path, range(len(order)), linestyle='-', linewidth=2, zorder=4, color='#333333', label='Mean Path Line')
+    # Connect ±1 Std bounds
+    if 1 in std_levels:
+        ax.plot(mean_path - std_path, range(len(order)), linestyle='--', linewidth=2, zorder=3, color='#82A582', label='±1 Std Line')
+        ax.plot(mean_path + std_path, range(len(order)), linestyle='--', linewidth=2, zorder=3, color='#82A582', label='_nolegend_')
+    if 1 in std_levels and plot_fill['1']:
+        ax.fill_betweenx(
+            range(len(order)),
+            mean_path - std_path,
+            mean_path + std_path,
+            color='#82A582',
+            alpha=0.4,
+            zorder=4,
+            label='68% Perzentil'
+        )
+    # Connect ±2 Std bounds
+    if 2 in std_levels:
+        ax.plot(mean_path - 2*std_path, range(len(order)), linestyle=':', linewidth=2, zorder=2, color='#517551', label='±2 Std Line')
+        ax.plot(mean_path + 2*std_path, range(len(order)), linestyle=':', linewidth=2, zorder=2, color='#517551', label='_nolegend_')
+    if 2 in std_levels and plot_fill['2']:
+        ax.fill_betweenx(
+            range(len(order)),
+            mean_path - 2*std_path,
+            mean_path + 2*std_path,
+            color='#517551',
+            alpha=0.4,
+            zorder=4,
+            label='95% Perzentil'
+        )
+    # Connect ±3 Std bounds
+    if 3 in std_levels:
+        ax.plot(mean_path - 3*std_path, range(len(order)), linestyle='-.', linewidth=2, zorder=1, color='#2F4F2F', label='±3 Std Line')
+        ax.plot(mean_path + 3*std_path, range(len(order)), linestyle='-.', linewidth=2, zorder=1, color='#2F4F2F', label='_nolegend_')
+    if 3 in std_levels and plot_fill['3']:
+        ax.fill_betweenx(
+            range(len(order)),
+            mean_path - 3*std_path,
+            mean_path + 3*std_path,
+            color='#2F4F2F',
+            alpha=0.4,
+            zorder=4,
+            label='99.7% Perzentil'
+        )
+
+    for idx, feature in enumerate(order):
+        # Plot mean cumulative SHAP
+        if plot_scatter['mean']:
+            if idx == 0:
+                ax.scatter(
+                    mean_path[idx],
+                    idx,
+                    marker='D',
+                    s=50,
+                    zorder=5,
+                    color='#333333',
+                    label='Mean Path'
+                )
+            else:
+                ax.scatter(
+                    mean_path[idx],
+                    idx,
+                    marker='D',
+                    s=50,
+                    zorder=5,
+                    color='#333333'
+                )
+        # Plot symmetric std bounds
+        if 1 in std_levels and plot_scatter['1 std']:
+            if idx == 0:
+                ax.scatter(
+                    [mean_path[idx] - std_path[idx], mean_path[idx] + std_path[idx]],
+                    [idx, idx],
+                    marker='X',
+                    s=50,
+                    zorder=5,
+                    color='#82A582',
+                    label='±1 Std'
+                )
+            else:
+                ax.scatter(
+                    [mean_path[idx] - std_path[idx], mean_path[idx] + std_path[idx]],
+                    [idx, idx],
+                    marker='X',
+                    s=50,
+                    zorder=5,
+                    color='#82A582'
+                )
+        # Plot ±2 Std bounds
+        if 2 in std_levels and plot_scatter['2 std']:
+            if idx == 0:
+                ax.scatter(
+                    [mean_path[idx] - 2*std_path[idx], mean_path[idx] + 2*std_path[idx]],
+                    [idx, idx],
+                    marker='s',
+                    s=50,
+                    zorder=5,
+                    color='#517551',
+                    label='±2 Std'
+                )
+            else:
+                ax.scatter(
+                    [mean_path[idx] - 2*std_path[idx], mean_path[idx] + 2*std_path[idx]],
+                    [idx, idx],
+                    marker='s',
+                    s=50,
+                    zorder=5,
+                    color='#517551'
+                )
+        # Plot ±3 Std bounds
+        if 3 in std_levels and plot_scatter['3 std']:
+            if idx == 0:
+                ax.scatter(
+                    [mean_path[idx] - 3*std_path[idx], mean_path[idx] + 3*std_path[idx]],
+                    [idx, idx],
+                    marker='^',
+                    s=50,
+                    zorder=5,
+                    color='#2F4F2F',
+                    label='±3 Std'
+                )
+            else:
+                ax.scatter(
+                    [mean_path[idx] - 3*std_path[idx], mean_path[idx] + 3*std_path[idx]],
+                    [idx, idx],
+                    marker='^',
+                    s=50,
+                    zorder=5,
+                    color='#2F4F2F'
+                )
+    # Create a legend without duplicate labels
+    handles, labels = ax.get_legend_handles_labels()
+    by_label = dict(zip(labels, handles))
+    ax.legend(by_label.values(), by_label.keys(), loc='upper left')
+    ax.set_title(f"SHAP Decision Plot with Mean Path", fontsize=26)
+    plt.show()
+
+#%%
+# Example usage:
+scatter_levels = ['none']
+line_levels = ['mean', '2 std']
+fill_levels = ['95%']  # ['68%', '95%', '99%']
+
+custom_decision_plot(shap_values_right_class[class_id]['base value'],
+                     shap_values_right_class[class_id]['values'],
+                     X_test, feature_names,
+                     scatter_levels=scatter_levels,
+                     line_levels=line_levels,
+                     fill_levels=fill_levels)
 
 # %%
