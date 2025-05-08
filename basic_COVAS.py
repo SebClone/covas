@@ -189,9 +189,9 @@ for class_id in class_labels:
 # %%
 ### Section 9: Decision plot (SHAP)
 # Configuration: which elements to plot
-scatter_levels = ['mean', '1 std', '2 std', '3 std']  # options: 'none', 'all', 'mean', '1 std', '2 std', '3 std'
-line_levels = ['mean', '1 std', '2 std', '3 std']     # options: same as scatter_levels
-fill_levels = ['68%', '95%', '99%']                   # options: '68%', '95%', '99%'
+scatter_levels = ['none']  # options: 'none', 'all', 'mean', '1 std', '2 std', '3 std'
+line_levels = ['mean', '2 std']     # options: same as scatter_levels
+fill_levels = ['95%']                   # options: '68%', '95%', '99%'
 
 # std_levels = 'all'  # <-- modify this to a list like [1,2,3], 'all', or 'none'
 
@@ -262,6 +262,7 @@ if 1 in std_levels and plot_fill['1']:
         mean_path + std_path,
         color='#82A582',
         alpha=0.4,
+        zorder=4,
         label='68% Perzentil'
     )
 # Connect ±2 Std bounds
@@ -275,6 +276,7 @@ if 2 in std_levels and plot_fill['2']:
         mean_path + 2*std_path,
         color='#517551',
         alpha=0.4,
+        zorder=4,
         label='95% Perzentil'
     )
 # Connect ±3 Std bounds
@@ -288,6 +290,7 @@ if 3 in std_levels and plot_fill['3']:
         mean_path + 3*std_path,
         color='#2F4F2F',
         alpha=0.4,
+        zorder=4,
         label='99.7% Perzentil'
     )
 
