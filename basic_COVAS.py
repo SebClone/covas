@@ -38,20 +38,21 @@ X = data.data       # Features
 y = data.target     # Labels
 
 ids = pd.DataFrame()
-ids['ID'] = ['patient ' + str(i) for i in range(1, len(X))]
+ids['ID'] = ['patient ' + str(i) for i in range(1, len(X) + 1)]
 
 feature_names = data.feature_names.tolist()
 class_labels = data.target_names.tolist()
 
 #%%
 ### Section 2: Preprocess data
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=100)
-train_ids, test_ids = train_test_split(ids, test_size=0.3, random_state=100)
-
-#
+# Split X und y, aber gleichzeitig auch die IDs
+X_train, X_test, y_train, y_test, train_ids, test_ids = train_test_split(
+    X, y, ids['ID'], test_size=0.3, random_state=100
+)
 scaler = StandardScaler()
 X_train_scaled = scaler.fit_transform(X_train)
 X_test_scaled = scaler.transform(X_test)
+
 
 #%%
 ### Section 3: Build neural network model
@@ -100,11 +101,11 @@ shap_values_right_class = {}
 for class_id in class_labels:
     # Extract SHAP values for correctly classified cases of each class
     indices = right_class_indices[class_id]
-    class_ids = ids.iloc[indices]
+    class_ids = test_ids.iloc[indices]
     shap_values_right_class[class_id] = {
         'values' : shap_raw_values[indices],
         'base value': np.mean(shap_base_values),
-        'ids' : class_ids['ID'].tolist()
+        'ids' : class_ids.tolist()
     }
 # %%
 ### Section 6: Calculate SHAP value distribution per feature/class
@@ -130,6 +131,12 @@ for class_id in class_labels:
 
 
 # %%
+# Set COVA mode: 'continuous' for z-score values, 'threshold' for binary outlier flags
+COVA_mode = 'threshold'  # or 'threshold'
+# Define threshold in standard deviations for threshold mode
+threshold_std = 1
+
+# %%
 ### Section 7: Create COVA Matrix
 class_COVAS_matrix = {}
 for class_id in class_labels:
@@ -141,7 +148,15 @@ for class_id in class_labels:
     for feature in raw_matrix.columns:
         mean = feature_distribution_info[feature]['mean']
         std = feature_distribution_info[feature]['std']
-        COVAS_matrix[feature] = np.abs((COVAS_matrix[feature] - mean) / std)
+        if COVA_mode == 'continuous':
+            # continuous z-score based COVAS
+            COVAS_matrix[feature] = np.abs((COVAS_matrix[feature] - mean) / std)
+        elif COVA_mode == 'threshold':
+            # binary threshold: 1 if abs(z-score) > threshold_std, else 0
+            z_vals = (COVAS_matrix[feature] - mean) / std
+            COVAS_matrix[feature] = (np.abs(z_vals) > threshold_std).astype(int)
+        else:
+            raise ValueError(f"Unknown COVA_mode: {COVA_mode}. Use 'continuous' or 'threshold'.")
 
     class_COVAS_matrix[class_id] = COVAS_matrix
 
@@ -159,9 +174,14 @@ for class_id in class_labels:
     COVA_Score = number_of_CO_cases/number_of_features
 
     # Store COVA Score and COVAS matrix as a DataFrame
-    COVAS_scoring_df = pd.DataFrame(COVA_Score, columns=['COVAS'], index=right_class_indices[class_id]).sort_values(by='COVAS', ascending=False)
+    ids_for_class = shap_values_right_class[class_id]['ids']
+    COVAS_scoring_df = pd.DataFrame(
+        COVA_Score,
+        columns=['COVAS'],
+        index=ids_for_class
+    ).sort_values(by='COVAS', ascending=False)
     COVAS_matrix = pd.DataFrame(current_COVAS_matrix, columns=feature_names)
-    COVAS_matrix.index = right_class_indices[class_id]
+    COVAS_matrix.index = ids_for_class
     class_COVAS[class_id] = {
         'COVAS Score' : COVAS_scoring_df,
         'COVAS Matrix' : COVAS_matrix,
