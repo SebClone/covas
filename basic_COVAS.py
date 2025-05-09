@@ -71,22 +71,34 @@ test_loss, test_acc = model.evaluate(X_test_scaled, y_test, verbose=0)
 print(f"Final Test Accuracy: {test_acc * 100:.2f}%")
 
 
+###
 #%%
-### Section 4: Identify correctly classified cases
-model_predictions_probabilities = model.predict(X_test_scaled)
-model_predictions = (model_predictions_probabilities.flatten() > 0.5).astype(int)
+### Section 4: Identify correctly classified cases per class with IDs
+# Get model predictions as integers
+y_pred_raw = model.predict(X_test_scaled).flatten()
+y_pred = (y_pred_raw > 0.5).astype(int)
 
-#
-true_labels = np.array(y_test).reshape((y_test.shape[0],1))
+# Create pandas Series for true and predicted labels with test sample IDs as index
+y_true = pd.Series(y_test, index=test_ids)
+y_pred = pd.Series(y_pred, index=test_ids)
 
-right_class_indices = {}
-for class_id in np.unique(model_predictions):
-    # Find indices where prediction matches true label for each class
-    match_indices = np.where((model_predictions == class_id) & (true_labels == class_id))[0]
-    right_class_indices[class_labels[class_id]] = match_indices
+# Dictionary to store DataFrame per class of correctly classified instances
+correct_classification = {}
 
-for class_id, indices in right_class_indices.items():
-    print(f"Number of correctly classified {class_id}: {len(indices)}")
+# Iterate over numeric class IDs and their names
+for class_id, class_name in enumerate(class_labels):
+    # Mask for instances correctly classified as this class
+    mask_correct = (y_true == class_id) & (y_pred == class_id)
+    # Extract the indices (positions) relative to X_test and matching IDs
+    indices = np.where(mask_correct.values)[0]
+    ids_list = mask_correct[mask_correct].index.tolist()
+    # Create DataFrame with index positions and IDs
+    class_df = pd.DataFrame({
+        'index': indices,
+        'ID': ids_list
+    })
+    correct_classification[class_name] = class_df
+    print(f"Class '{class_name}': {len(class_df)} correctly classified instances")
 
 
 # %%
@@ -98,23 +110,26 @@ shap_raw_values = shap_values.values
 shap_base_values = shap_values.base_values
 
 shap_values_right_class = {}
-for class_id in class_labels:
-    # Extract SHAP values for correctly classified cases of each class
-    indices = right_class_indices[class_id]
-    class_ids = test_ids.iloc[indices]
-    shap_values_right_class[class_id] = {
-        'values' : shap_raw_values[indices],
+for class_id, class_name in enumerate(class_labels):
+    # Retrieve DataFrame of correctly classified instances for this class
+    class_df = correct_classification[class_name]
+    # Extract indices and IDs from class_df
+    indices = class_df['index'].values
+    ids_list = class_df['ID'].tolist()
+    # Store SHAP values, base value, and IDs in dictionary
+    shap_values_right_class[class_name] = {
+        'values': shap_raw_values[indices],
         'base value': np.mean(shap_base_values),
-        'ids' : class_ids.tolist()
+        'ids': ids_list
     }
 # %%
 ### Section 6: Calculate SHAP value distribution per feature/class
 class_feature_distribution = {}
-for class_id in class_labels:
+for class_name in class_labels:
     # Select the SHAP values for the current class
-    selected_shap_values = shap_values_right_class[class_id]['values']
+    selected_shap_values = shap_values_right_class[class_name]['values']
     # Get the corresponding IDs
-    selected_ids = shap_values_right_class[class_id]['ids']
+    selected_ids = shap_values_right_class[class_name]['ids']
 
     feature_distribution_info = {}
     for feature in range(len(feature_names)):
@@ -127,7 +142,7 @@ for class_id in class_labels:
                                                             'std'    : feature_std_dev
                                                             }
     # Store distribution info for this class
-    class_feature_distribution[class_id] = feature_distribution_info
+    class_feature_distribution[class_name] = feature_distribution_info
 
 
 # %%
@@ -139,9 +154,9 @@ threshold_std = 1
 # %%
 ### Section 7: Create COVA Matrix
 class_COVAS_matrix = {}
-for class_id in class_labels:
+for class_name in class_labels:
     # Select the SHAP values for the current class
-    current_selected_shap_vlaues = shap_values_right_class[class_id]['values']
+    current_selected_shap_vlaues = shap_values_right_class[class_name]['values']
 
     raw_matrix = pd.DataFrame(current_selected_shap_vlaues, columns=feature_names)
     COVAS_matrix = raw_matrix.copy()
@@ -158,23 +173,22 @@ for class_id in class_labels:
         else:
             raise ValueError(f"Unknown COVA_mode: {COVA_mode}. Use 'continuous' or 'threshold'.")
 
-    class_COVAS_matrix[class_id] = COVAS_matrix
+    class_COVAS_matrix[class_name] = COVAS_matrix
 
-# Subsection 7.2: COVA matrix with threshold method (to be implemented)
 
 # %%
 ### Section 8: Compute COVA Score 
 class_COVAS = {}
-for class_id in class_labels:
+for class_name in class_labels:
     # Select the COVAS matrix for the current class
-    current_COVAS_matrix = class_COVAS_matrix[class_id]
+    current_COVAS_matrix = class_COVAS_matrix[class_name]
 
     number_of_CO_cases = np.sum(np.array(current_COVAS_matrix), axis=1) # CO = Classification Outliers
     number_of_features = current_COVAS_matrix.shape[1]
     COVA_Score = number_of_CO_cases/number_of_features
 
     # Store COVA Score and COVAS matrix as a DataFrame
-    ids_for_class = shap_values_right_class[class_id]['ids']
+    ids_for_class = shap_values_right_class[class_name]['ids']
     COVAS_scoring_df = pd.DataFrame(
         COVA_Score,
         columns=['COVAS'],
@@ -182,16 +196,16 @@ for class_id in class_labels:
     ).sort_values(by='COVAS', ascending=False)
     COVAS_matrix = pd.DataFrame(current_COVAS_matrix, columns=feature_names)
     COVAS_matrix.index = ids_for_class
-    class_COVAS[class_id] = {
+    class_COVAS[class_name] = {
         'COVAS Score' : COVAS_scoring_df,
         'COVAS Matrix' : COVAS_matrix,
-        'IDs' : shap_values_right_class[class_id]['ids']
+        'IDs' : shap_values_right_class[class_name]['ids']
     }
 
 # %%
 ### Section 9: SHAP Decision plot
-def custom_decision_plot(shap_base, shap_vals, X_test, feature_names,
-                         scatter_levels=None, line_levels=None, fill_levels=None):
+def custom_decision_plot(shap_dictonary, X_test, feature_names,
+                         scatter_levels=None, line_levels=None, fill_levels=None, class_name=None):
     """
     Create a custom SHAP decision plot with optional overlays for mean path,
     standard deviation bounds, percentile fills, and scatter markers.
@@ -218,6 +232,10 @@ def custom_decision_plot(shap_base, shap_vals, X_test, feature_names,
     None
         Displays a matplotlib plot.
     """
+    shap_base = shap_dictonary[class_name]['base value'],
+    shap_vals = shap_dictonary[class_name]['values']
+
+
     if scatter_levels is None and line_levels is None and fill_levels is None:
         shap.decision_plot(shap_base, shap_vals, X_test, feature_names, show=True)
         return
@@ -413,7 +431,10 @@ def custom_decision_plot(shap_base, shap_vals, X_test, feature_names,
     handles, labels = ax.get_legend_handles_labels()
     by_label = dict(zip(labels, handles))
     ax.legend(by_label.values(), by_label.keys(), loc='upper left')
-    ax.set_title(f"SHAP Decision Plot with Mean Path", fontsize=26)
+    if class_name is not None:
+        ax.set_title(f"SHAP Decision Plot for class {class_name} with Mean Path", fontsize=26)
+    else:
+        ax.set_title(f"SHAP Decision Plot with Mean Path", fontsize=26)
     plt.show()
 
 
@@ -423,13 +444,25 @@ scatter_levels = ['none']
 line_levels = ['mean', '2 std']
 fill_levels = ['95%']  # Options: ['68%', '95%', '99%']
 
+# Example decision plot for the first class
+class_name = class_labels[1]
+# Subset feature matrix for correctly classified samples of this class
+indices = correct_classification[class_name]['index'].values
+X_subset = X_test_scaled[indices]
 custom_decision_plot(
-    shap_values_right_class[class_id]['base value'],
-    shap_values_right_class[class_id]['values'],
-    X_test, feature_names,
+    shap_values_right_class,
+    X_subset, feature_names,
     scatter_levels=scatter_levels,
     line_levels=line_levels,
-    fill_levels=fill_levels
+    fill_levels=fill_levels,
+    class_name='benign'
 )
-
+custom_decision_plot(
+    shap_values_right_class,
+    X_subset, feature_names,
+    scatter_levels=scatter_levels,
+    line_levels=line_levels,
+    fill_levels=fill_levels,
+    class_name= class_labels[0]
+)
 # %%
