@@ -65,7 +65,21 @@ def get_correct_classification(model, X_test_scaled, y_test, test_ids, class_lab
         columns:
           - 'index': position of the instance in X_test_scaled
           - 'ID': identifier from test_ids
+
+    Raises
+    ------
+    TypeError
+        If input types are incorrect.
+    ValueError
+        If input values are invalid or inconsistent.
     """
+    # Input validation
+    if not hasattr(model, "predict"):
+        raise TypeError(f"model must have a .predict() method, got {type(model)}")
+    if X_test_scaled.shape[0] != len(y_test) or len(y_test) != len(test_ids):
+        raise ValueError("Lengths of X_test_scaled, y_test, and test_ids must be equal")
+    if not isinstance(class_labels, list) or not all(isinstance(c, str) for c in class_labels):
+        raise TypeError("class_labels must be a list of strings")
     # Predict and convert to class labels
     y_pred_raw = model.predict(X_test_scaled).flatten()
     y_pred = (y_pred_raw > 0.5).astype(int)
@@ -114,7 +128,23 @@ def get_shap_values_for_correct_classification(model, X_train_scaled, X_test_sca
           - 'values': array of SHAP values for correctly classified samples of that class
           - 'base value': float, average SHAP base value
           - 'ids': list of sample IDs corresponding to those instances
+
+    Raises
+    ------
+    TypeError
+        If input types are incorrect.
+    ValueError
+        If input values are invalid or inconsistent.
     """
+    # Input validation
+    if not hasattr(model, "predict"):
+        raise TypeError(f"model must have a .predict() method, got {type(model)}")
+    if X_train_scaled.ndim != 2 or X_test_scaled.ndim != 2:
+        raise ValueError("X_train_scaled and X_test_scaled must be 2D arrays")
+    if not isinstance(correct_classification, dict):
+        raise TypeError("correct_classification must be a dict mapping class names to DataFrames")
+    if not isinstance(class_labels, list) or not all(isinstance(c, str) for c in class_labels):
+        raise TypeError("class_labels must be a list of strings")
     # Initialize SHAP explainer and compute values for all test samples
     explainer = shap.Explainer(model, X_train_scaled)
     shap_result = explainer(X_test_scaled)
@@ -155,7 +185,19 @@ def get_feature_distribution(shap_values_right_class, feature_names):
           - 'fdata': array of SHAP values for that feature and class
           - 'mean': float, mean of SHAP values for that feature
           - 'std': float, standard deviation of SHAP values for that feature
+
+    Raises
+    ------
+    TypeError
+        If input types are incorrect.
+    ValueError
+        If input values are invalid or inconsistent.
     """
+    # Input validation
+    if not isinstance(shap_values_right_class, dict):
+        raise TypeError("shap_values_right_class must be a dict")
+    if not isinstance(feature_names, list) or not all(isinstance(f, str) for f in feature_names):
+        raise TypeError("feature_names must be a list of strings")
     class_feature_distribution = {}
     for class_name, info in shap_values_right_class.items():
         shap_vals = info['values']
@@ -197,7 +239,25 @@ def get_COVA_matrix(COVA_mode, class_labels, shap_values_right_class, feature_na
         (rows are samples, columns are features), where:
           - In 'continuous' mode: each cell is the absolute z-score.
           - In 'threshold' mode: each cell is 1 if |z-score| > threshold_std, else 0.
+
+    Raises
+    ------
+    TypeError
+        If input types are incorrect.
+    ValueError
+        If input values are invalid or inconsistent.
     """
+    # Input validation
+    if COVA_mode not in ("continuous", "threshold"):
+        raise ValueError(f"COVA_mode must be 'continuous' or 'threshold', got {COVA_mode!r}")
+    if COVA_mode == "threshold" and threshold_std is None:
+        raise ValueError("threshold_std must be provided when COVA_mode is 'threshold'")
+    if not isinstance(class_labels, list) or not all(isinstance(c, str) for c in class_labels):
+        raise TypeError("class_labels must be a list of strings")
+    if not isinstance(feature_names, list) or not all(isinstance(f, str) for f in feature_names):
+        raise TypeError("feature_names must be a list of strings")
+    if not isinstance(class_feature_distribution, dict):
+        raise TypeError("class_feature_distribution must be a dict")
     cova_matrix_dict = {}
     for class_name in class_labels:
         # Build raw DataFrame of SHAP values
@@ -242,7 +302,21 @@ def get_COVA_score(class_labels, class_COVA_matrix, shap_values_right_class):
           - 'COVAS Score': DataFrame of COVA scores (column 'COVAS') indexed by sample IDs, sorted descending.
           - 'COVAS Matrix': COVA matrix DataFrame with sample IDs as index.
           - 'IDs': list of sample IDs.
+
+    Raises
+    ------
+    TypeError
+        If input types are incorrect.
+    ValueError
+        If input values are invalid or inconsistent.
     """
+    # Input validation
+    if not isinstance(class_labels, list) or not all(isinstance(c, str) for c in class_labels):
+        raise TypeError("class_labels must be a list of strings")
+    if not isinstance(class_COVA_matrix, dict):
+        raise TypeError("class_COVA_matrix must be a dict mapping class names to DataFrames")
+    if not isinstance(shap_values_right_class, dict):
+        raise TypeError("shap_values_right_class must be a dict mapping class names to info dicts")
     class_COVAS = {}
     for class_name in class_labels:
         # Retrieve the COVA matrix and IDs for this class
@@ -298,7 +372,19 @@ def custom_decision_plot(shap_dictonary, X_test, feature_names,
     -------
     None
         Displays a matplotlib plot.
+
+    Raises
+    ------
+    TypeError
+        If input types are incorrect.
+    ValueError
+        If input values are invalid or inconsistent.
     """
+    # Input validation
+    if class_name not in shap_dictonary:
+        raise ValueError(f"class_name {class_name!r} not found in shap_dictionary keys")
+    if not hasattr(plt, "figure"):
+        raise TypeError("matplotlib.pyplot must be imported as plt")
     # Retrieve the SHAP base value (expected value) and SHAP values for the given class
     shap_base = shap_dictonary[class_name]['base value'],
     shap_vals = shap_dictonary[class_name]['values']
