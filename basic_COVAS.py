@@ -232,10 +232,11 @@ def custom_decision_plot(shap_dictonary, X_test, feature_names,
     None
         Displays a matplotlib plot.
     """
+    # Retrieve the SHAP base value (expected value) and SHAP values for the given class
     shap_base = shap_dictonary[class_name]['base value'],
     shap_vals = shap_dictonary[class_name]['values']
 
-
+    # If no overlays are specified, generate a standard SHAP decision plot
     if scatter_levels is None and line_levels is None and fill_levels is None:
         shap.decision_plot(shap_base, shap_vals, X_test, feature_names, show=True)
         return
@@ -246,9 +247,7 @@ def custom_decision_plot(shap_dictonary, X_test, feature_names,
     if fill_levels is None:
         fill_levels = []
 
-    # std_levels = 'all'  # <-- modify this to a list like [1,2,3], 'all', or 'none'
-
-    # Determine std_levels numeric list based on line_levels
+    # Map string levels to numeric standard deviation values
     std_map = {'1 std': 1, '2 std': 2, '3 std': 3}
     if 'all' in line_levels:
         std_levels = [1, 2, 3]
@@ -263,12 +262,12 @@ def custom_decision_plot(shap_dictonary, X_test, feature_names,
     height_in_inches = 10 #placeholder
     width_in_pixels = 2926
     DPI = 300
-    # Convert width from pixels to inches
+    # Set figure size for plotting, converting width from pixels to inches
     width_in_inches = width_in_pixels / DPI
 
     # Prepare figure with desired size
     plt.figure(figsize=(width_in_inches, height_in_inches))
-    # Generate SHAP decision plot without immediate display
+    # Generate the decision plot but suppress immediate display
     shap.decision_plot(
         shap_base,
         shap_vals,
@@ -278,28 +277,26 @@ def custom_decision_plot(shap_dictonary, X_test, feature_names,
         ignore_warnings=True
     )
     ax = plt.gca()
-    # Initialize cumulative sums for means and std deviations
+    # Initialize cumulative sums for means and std deviations (not used but kept for clarity)
     cumulative_mean = shap_base
     cumulative_neg_std = shap_base
     cumulative_pos_std = shap_base
 
-
     ax = plt.gca()
-    # Get the actual plot order from the decision_plot
+    # Determine feature order used in the SHAP decision plot
     order = [tick.get_text() for tick in ax.get_yticklabels() if tick.get_text()]
     shap_vals_ordered = shap_vals[:, [feature_names.index(f) for f in order]]
 
-    # Compute cumulative contributions per sample
+    # Compute cumulative SHAP paths, mean and standard deviation for overlays
     base = shap_base
     cum_paths = base + np.cumsum(shap_vals_ordered, axis=1)
-
-    # Compute mean and std at each feature index
     mean_path = np.mean(cum_paths, axis=0)
     std_path = np.std(cum_paths, axis=0)
 
+    # Plot the mean/std lines and fill regions if enabled
     if 'mean' in line_levels:
         ax.plot(mean_path, range(len(order)), linestyle='-', linewidth=2, zorder=4, color='#333333', label='Mean Path Line')
-    # Connect ±1 Std bounds
+    # Plot the ±1 Std lines and fill
     if 1 in std_levels:
         ax.plot(mean_path - std_path, range(len(order)), linestyle='--', linewidth=2, zorder=3, color='#82A582', label='±1 Std Line')
         ax.plot(mean_path + std_path, range(len(order)), linestyle='--', linewidth=2, zorder=3, color='#82A582', label='_nolegend_')
@@ -313,7 +310,7 @@ def custom_decision_plot(shap_dictonary, X_test, feature_names,
             zorder=4,
             label='68% Perzentil'
         )
-    # Connect ±2 Std bounds
+    # Plot the ±2 Std lines and fill
     if 2 in std_levels:
         ax.plot(mean_path - 2*std_path, range(len(order)), linestyle='--', linewidth=2, zorder=2, color='#517551', label='±2 Std Line')
         ax.plot(mean_path + 2*std_path, range(len(order)), linestyle='--', linewidth=2, zorder=2, color='#517551', label='_nolegend_')
@@ -327,7 +324,7 @@ def custom_decision_plot(shap_dictonary, X_test, feature_names,
             zorder=4,
             label='95% Perzentil'
         )
-    # Connect ±3 Std bounds
+    # Plot the ±3 Std lines and fill
     if 3 in std_levels:
         ax.plot(mean_path - 3*std_path, range(len(order)), linestyle='--', linewidth=2, zorder=1, color='#2F4F2F', label='±3 Std Line')
         ax.plot(mean_path + 3*std_path, range(len(order)), linestyle='--', linewidth=2, zorder=1, color='#2F4F2F', label='_nolegend_')
@@ -342,6 +339,7 @@ def custom_decision_plot(shap_dictonary, X_test, feature_names,
             label='99.7% Perzentil'
         )
 
+    # Plot scatter markers for mean and std bounds at each feature position
     for idx, feature in enumerate(order):
         # Plot mean cumulative SHAP
         if plot_scatter['mean']:
@@ -427,10 +425,11 @@ def custom_decision_plot(shap_dictonary, X_test, feature_names,
                     zorder=5,
                     color='#2F4F2F'
                 )
-    # Create a legend without duplicate labels
+    # Create a clean legend with unique labels
     handles, labels = ax.get_legend_handles_labels()
     by_label = dict(zip(labels, handles))
     ax.legend(by_label.values(), by_label.keys(), loc='upper left')
+    # Set plot title based on the class
     if class_name is not None:
         ax.set_title(f"SHAP Decision Plot for class {class_name} with Mean Path", fontsize=26)
     else:
