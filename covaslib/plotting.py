@@ -62,7 +62,7 @@ def custom_decision_plot(shap_dictonary, X_test, feature_names,
     if not hasattr(plt, "figure"):
         raise TypeError("matplotlib.pyplot must be imported as plt")
     # Retrieve the SHAP base value (expected value) and SHAP values for the given class
-    shap_base = shap_dictonary[class_name]['base value'],
+    shap_base = shap_dictonary[class_name]['base value']
     shap_vals = shap_dictonary[class_name]['values']
 
     # If no overlays are specified, generate a standard SHAP decision plot

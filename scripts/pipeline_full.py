@@ -54,19 +54,20 @@ COVA_matrices = get_COVA_matrix('continuous', class_labels, shap_vals, feature_n
 COVA_scores = get_COVA_score(class_labels, COVA_matrices, shap_vals)
 
 # Plot
-for label in class_labels:
-    idx = correct_classification[label]['index'].values
-    if len(idx) == 0:
-        continue
-    X_subset = X_test_scaled[idx]
-    if len(shap_vals[label]) != len(X_subset):
-        continue
+scatter_levels = ['none']
+line_levels = ['mean', '2 std']
+fill_levels = ['95%']  # Options: ['68%', '95%', '99%']
+
+# Example decision plot for the first class
+for class_name in class_labels:
+    # Subset feature matrix for correctly classified samples of this class
+    indices = correct_classification[class_name]['index'].values
+    X_subset = X_test_scaled[indices]
     custom_decision_plot(
         shap_vals,
-        X_subset,
-        feature_names,
-        scatter_levels=['none'],
-        line_levels=['mean', '2 std'],
-        fill_levels=['95%'],
-        class_name=label
+        X_subset, feature_names,
+        scatter_levels=scatter_levels,
+        line_levels=line_levels,
+        fill_levels=fill_levels,
+        class_name=class_name
     )
