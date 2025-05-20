@@ -30,29 +30,30 @@ def test_cova_matrix_and_score():
     X = data.data
     y = data.target
     class_labels = data.target_names.tolist()
+    feature_names = data.feature_names.tolist()
     ids = pd.Series(['id_' + str(i) for i in range(len(X))])
 
-    X_train, X_test, y_train, y_test, id_train, id_test = train_test_split(X, y, ids, test_size=0.3, random_state=100)
+    X_train_scaled, X_test_scaled, y_train, y_test, id_train, id_test = train_test_split(X, y, ids, test_size=0.3, random_state=100)
     scaler = StandardScaler()
-    X_train = scaler.fit_transform(X_train)
-    X_test = scaler.transform(X_test)
+    X_train_scaled = scaler.fit_transform(X_train_scaled)
+    X_test_scaled = scaler.transform(X_test_scaled)
 
     # Build and train a simple neural network
     model = Sequential([
-    Dense(64, input_shape=(X_train.shape[1],), activation='relu'),
+    Dense(64, input_shape=(X_train_scaled.shape[1],), activation='relu'),
     Dense(32, activation='relu'),
     Dense(32, activation='relu'),
     Dense(1, activation='sigmoid')
     ])
     model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-    model.fit(X_train, y_train, epochs=5, batch_size=16, verbose=0)
+    model.fit(X_train_scaled, y_train, epochs=5, batch_size=16, verbose=0)
 
     # Generate SHAP values and compute COVA
-    correct_classified = get_correct_classification(model, X_test, y_test, id_test, class_labels)
-    shap_values = get_shap_values_for_correct_classification(model, X_test, correct_classified)
-    feature_distributions = get_feature_distribution(shap_values, correct_classified)
-    cova_matrix = get_COVA_matrix(shap_values, feature_distributions)
-    cova_scores = get_COVA_score(shap_values, cova_matrix, correct_classified)
+    correct_classified = get_correct_classification(model, X_test_scaled, y_test, id_test, class_labels)
+    shap_values = get_shap_values_for_correct_classification(model, X_train_scaled, X_test_scaled, correct_classified, class_labels)
+    feature_distributions = get_feature_distribution(shap_values, feature_names)
+    cova_matrix = get_COVA_matrix('continuous', class_labels, shap_values, feature_names, feature_distributions)
+    cova_scores = get_COVA_score(class_labels, cova_matrix, shap_values)
 
     # Basic assertions
     assert isinstance(cova_matrix, dict)

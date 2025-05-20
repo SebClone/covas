@@ -264,3 +264,4 @@ def custom_decision_plot(shap_dictonary, X_test, feature_names,
     else:
         ax.set_title(f"SHAP Decision Plot with Mean Path", fontsize=26)
     plt.show()
+
