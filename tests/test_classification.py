@@ -4,7 +4,7 @@ test_classification.py
 This test module verifies the functionality of the get_correct_classification function
 using the breast cancer dataset from scikit-learn and a simple neural network classifier.
 
-Author: Your Name
+Author: Sebastian Roth
 """
 
 import numpy as np
@@ -30,13 +30,12 @@ def test_correct_classification_on_breast_cancer():
     class_labels = data.target_names.tolist()
     ids = pd.Series(['id_' + str(i) for i in range(len(X))])
 
-    X_train, X_test, y_train, y_test, id_train, id_test = train_test_split(X, y, ids, test_size=0.3, random_state=42)
+    X_train, X_test, y_train, y_test, id_train, id_test = train_test_split(X, y, ids, test_size=0.3, random_state=100)
     scaler = StandardScaler()
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.transform(X_test)
 
     # Build and train a simple neural network
-
     model = Sequential([
     Dense(64, input_shape=(X_train.shape[1],), activation='relu'),
     Dense(32, activation='relu'),

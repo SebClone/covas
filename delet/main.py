@@ -21,7 +21,7 @@ Requirements:
     - pandas
     - numpy
     - matplotlib
-    - tensorflow / keras
+    - tensorflow / tensorflow.tensorflow.keras
     - scikit-learn
     - shap
 """
