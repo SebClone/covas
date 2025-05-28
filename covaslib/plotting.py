@@ -38,11 +38,11 @@ def custom_decision_plot(shap_dictonary, X_test, feature_names,
     feature_names : list of str
         List of feature names (order must match shap_vals columns).
     scatter_levels : list of str, optional
-        Levels at which to plot scatter markers (e.g., ['mean', '1 std', '2 std', '3 std']).
+        Levels at which to plot scatter markers. Options: ['mean', '1 std', '2 std', '3 std', 'all', 'none'].
     line_levels : list of str, optional
-        Which lines to draw (e.g., ['mean', '1 std', '2 std']).
+        Which lines to draw. Options: ['mean', '1 std', '2 std', '3 std', 'all', 'none'].
     fill_levels : list of str, optional
-        Which percentile bands to fill (e.g., ['68%', '95%']).
+        Which percentile bands to fill. Options: ['68%', '95%', '99%', 'all', 'none'].
 
     Returns
     -------
@@ -71,17 +71,23 @@ def custom_decision_plot(shap_dictonary, X_test, feature_names,
         return
     if scatter_levels is None:
         scatter_levels = []
+    # If 'all' in scatter_levels, set all valid scatter options
+    if 'all' in scatter_levels:
+        scatter_levels = ['mean', '1 std', '2 std', '3 std']
     if line_levels is None:
         line_levels = []
+    # If 'all' in line_levels, set all valid line options
+    if 'all' in line_levels:
+        line_levels = ['mean', '1 std', '2 std', '3 std']
     if fill_levels is None:
         fill_levels = []
+    # If 'all' in fill_levels, set all valid fill options
+    if 'all' in fill_levels:
+        fill_levels = ['68%', '95%', '99%']
 
     # Map string levels to numeric standard deviation values
     std_map = {'1 std': 1, '2 std': 2, '3 std': 3}
-    if 'all' in line_levels:
-        std_levels = [1, 2, 3]
-    else:
-        std_levels = [std_map[s] for s in line_levels if s in std_map]
+    std_levels = [std_map[s] for s in line_levels if s in std_map]
 
     plot_scatter = {'mean': 'mean' in scatter_levels}
     plot_scatter.update({f'{i} std': (f'{i} std' in scatter_levels) for i in [1,2,3]})
@@ -264,4 +270,3 @@ def custom_decision_plot(shap_dictonary, X_test, feature_names,
     else:
         ax.set_title(f"SHAP Decision Plot with Mean Path", fontsize=26)
     plt.show()
-

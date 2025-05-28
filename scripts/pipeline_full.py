@@ -54,9 +54,9 @@ COVA_matrices = get_COVA_matrix('continuous', class_labels, shap_vals, feature_n
 COVA_scores = get_COVA_score(class_labels, COVA_matrices, shap_vals)
 
 # Plot
-scatter_levels = ['none']
-line_levels = ['mean', '2 std']  # Options: ['mean', '1 std', '2 std', '3 std']
-fill_levels = ['95%']  # Options: ['68%', '95%', '99%']
+scatter_levels = ['mean', '2 std']  # Options: ['mean', '1 std', '2 std', '3 std', 'all', 'none']   
+line_levels = ['mean', '2 std']  # Options: ['mean', '1 std', '2 std', '3 std', 'all', 'none']
+fill_levels = ['none']  # Options: ['68%', '95%', '99%', 'all', 'none']
 
 # Example decision plot for the first class
 for class_name in class_labels:
