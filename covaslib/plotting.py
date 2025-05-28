@@ -38,7 +38,7 @@ def custom_decision_plot(shap_dictonary, X_test, feature_names,
     feature_names : list of str
         List of feature names (order must match shap_vals columns).
     scatter_levels : list of str, optional
-        Levels at which to plot scatter markers (e.g., ['mean', '1 std']).
+        Levels at which to plot scatter markers (e.g., ['mean', '1 std', '2 std', '3 std']).
     line_levels : list of str, optional
         Which lines to draw (e.g., ['mean', '1 std', '2 std']).
     fill_levels : list of str, optional
@@ -257,7 +257,7 @@ def custom_decision_plot(shap_dictonary, X_test, feature_names,
     # Create a clean legend with unique labels
     handles, labels = ax.get_legend_handles_labels()
     by_label = dict(zip(labels, handles))
-    ax.legend(by_label.values(), by_label.keys(), loc='upper left')
+    ax.legend(by_label.values(), by_label.keys(), loc='lower right')
     # Set plot title based on the class
     if class_name is not None:
         ax.set_title(f"SHAP Decision Plot for class {class_name} with Mean Path", fontsize=26)
