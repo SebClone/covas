@@ -266,7 +266,7 @@ def custom_decision_plot(shap_dictonary, X_test, feature_names,
     ax.legend(by_label.values(), by_label.keys(), loc='lower right')
     # Set plot title based on the class
     if class_name is not None:
-        ax.set_title(f"SHAP Decision Plot for class {class_name} with Mean Path", fontsize=26)
+        ax.set_title(f"SHAP Decision Plot - Class: {class_name}", fontsize=26)
     else:
-        ax.set_title(f"SHAP Decision Plot with Mean Path", fontsize=26)
+        ax.set_title(f"SHAP Decision Plot", fontsize=26)
     plt.show()
