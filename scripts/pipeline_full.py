@@ -71,3 +71,24 @@ for class_name in class_labels:
         fill_levels=fill_levels,
         class_name=class_name
     )
+#%%
+# Export individual COVA components per class
+output_dir = Path(__file__).resolve().parents[1] / 'results'
+
+for class_name in class_labels:
+    # Score
+    score_df = pd.DataFrame(COVA_scores[class_name]['COVAS Score'])
+    score_df.index.name = 'ID'
+    score_df.to_csv(output_dir / f'COVA_score_{class_name}.csv')
+
+    # Matrix
+    matrix_df = pd.DataFrame(COVA_scores[class_name]['COVAS Matrix'], index=COVA_scores[class_name]['IDs'], columns=feature_names)
+    matrix_df.index.name = 'ID'
+    matrix_df.to_csv(output_dir / f'COVA_matrix_{class_name}.csv')
+
+    # IDs
+    ids_df = pd.DataFrame(COVA_scores[class_name]['IDs'])
+    ids_df.to_csv(output_dir / f'COVA_IDs_{class_name}.csv', index=False)
+    
+    print(f"Exported COVA components for class '{class_name}'")
+# %%
