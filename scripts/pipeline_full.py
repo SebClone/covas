@@ -44,7 +44,12 @@ model = Sequential([
     Dense(1, activation='sigmoid')
 ])
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+
 model.fit(X_train_scaled, y_train, validation_data=(X_test_scaled, y_test), epochs=10, batch_size=16)
+
+# Evaluate model
+loss, accuracy = model.evaluate(X_test_scaled, y_test, verbose=0)
+print(f"Test Accuracy: {accuracy:.4f}")
 
 # Run full COVAS pipeline
 correct_classification = get_correct_classification(model, X_test_scaled, y_test, pd.Series(range(len(y_test))), class_labels)
