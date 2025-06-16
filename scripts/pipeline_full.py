@@ -30,12 +30,16 @@ y = data.target
 feature_names = data.feature_names.tolist()
 class_labels = data.target_names.tolist()
 
+ids = pd.DataFrame()
+ids['ID'] = ['patient ' + str(i) for i in range(len(X))] # Create IDs for each sample
+
 # Split and scale
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=100)
+X_train, X_test, y_train, y_test, ids_train, ids_test = train_test_split(X, y, ids ,test_size=0.3, random_state=100)
 scaler = StandardScaler()
 X_train_scaled = scaler.fit_transform(X_train)
 X_test_scaled = scaler.transform(X_test)
 
+# %%
 # Train model
 model = Sequential([
     Dense(64, input_shape=(X_train.shape[1],), activation='relu'),
@@ -52,7 +56,7 @@ loss, accuracy = model.evaluate(X_test_scaled, y_test, verbose=0)
 print(f"Test Accuracy: {accuracy:.4f}")
 
 # Run full COVAS pipeline
-correct_classification = get_correct_classification(model, X_test_scaled, y_test, pd.Series(range(len(y_test))), class_labels)
+correct_classification = get_correct_classification(model, X_test_scaled, y_test, ids_test, class_labels)
 shap_vals = get_shap_values_for_correct_classification(model, X_train_scaled, X_test_scaled, correct_classification, class_labels)
 feat_dist = get_feature_distribution(shap_vals, feature_names)
 COVA_matrices = get_COVA_matrix('continuous', class_labels, shap_vals, feature_names, feat_dist)

@@ -41,9 +41,8 @@ features = features.fillna(features.mean())
 
 class_labels = ['Not MotM', 'MotM']
 
-
 # Split and scale
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=100)
+X_train, X_test, y_train, y_test, ids_train, ids_test = train_test_split(X, y, ids ,test_size=0.3, random_state=100)
 scaler = StandardScaler()
 X_train_scaled = scaler.fit_transform(X_train)
 X_test_scaled = scaler.transform(X_test)
@@ -55,16 +54,18 @@ model = Sequential([
     Dense(32, activation='relu'),
     Dense(1, activation='sigmoid')
 ])
+
+# Compile the model
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+# Train the model
+history = model.fit(X_train_scaled, y_train, validation_data=(X_test_scaled, y_test), epochs=20, batch_size=16, verbose=0)
+# Evaluate the model on the test data
+test_loss, test_acc = model.evaluate(X_test_scaled, y_test, verbose=0)
 
-model.fit(X_train_scaled, y_train, validation_data=(X_test_scaled, y_test), epochs=10, batch_size=16)
-
-# Evaluate model
-loss, accuracy = model.evaluate(X_test_scaled, y_test, verbose=0)
-print(f"Test Accuracy: {accuracy:.4f}")
+print(f"Final Test Accuracy: {test_acc * 100:.2f}%")
 
 # Run full COVAS pipeline
-correct_classification = get_correct_classification(model, X_test_scaled, y_test, pd.Series(range(len(y_test))), class_labels)
+correct_classification = get_correct_classification(model, X_test_scaled, y_test, ids_test, class_labels)
 shap_vals = get_shap_values_for_correct_classification(model, X_train_scaled, X_test_scaled, correct_classification, class_labels)
 feat_dist = get_feature_distribution(shap_vals, feature_names)
 COVA_matrices = get_COVA_matrix('continuous', class_labels, shap_vals, feature_names, feat_dist)
