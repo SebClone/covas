@@ -1,5 +1,6 @@
 # pipeline_full_MotM.py
 # Make covaslib discoverable even in VS Code's interactive window
+# %%
 import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parents[1]))
@@ -9,7 +10,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import tensorflow as tf
 from keras.models import Sequential
-from keras.layers import Dense
+from keras.layers import Dense, Dropout, BatchNormalization
+from keras.callbacks import EarlyStopping
+from keras.regularizers import l2
+from keras.layers import LeakyReLU
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.datasets import load_breast_cancer
@@ -49,21 +53,35 @@ X_test_scaled = scaler.transform(X_test)
 
 # Train model
 model = Sequential([
-    Dense(64, input_shape=(X_train.shape[1],), activation='relu'),
-    Dense(32, activation='relu'),
-    Dense(32, activation='relu'),
+    Dense(32, input_shape=(X_train.shape[1],), kernel_regularizer=l2(0.001)),
+    LeakyReLU(alpha=0.01),
+    BatchNormalization(),
+    Dropout(0.4),
+    Dense(16, kernel_regularizer=l2(0.001)),
+    LeakyReLU(alpha=0.01),
+    Dropout(0.4),
     Dense(1, activation='sigmoid')
 ])
 
 # Compile the model
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+# Early stopping callback
+early_stopping = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
 # Train the model
-history = model.fit(X_train_scaled, y_train, validation_data=(X_test_scaled, y_test), epochs=20, batch_size=16, verbose=0)
+history = model.fit(
+    X_train_scaled, y_train,
+    validation_data=(X_test_scaled, y_test),
+    epochs=150,
+    batch_size=8,
+    callbacks=[early_stopping],
+    verbose=0
+)
 # Evaluate the model on the test data
 test_loss, test_acc = model.evaluate(X_test_scaled, y_test, verbose=0)
 
 print(f"Final Test Accuracy: {test_acc * 100:.2f}%")
 
+# %%
 # Run full COVAS pipeline
 correct_classification = get_correct_classification(model, X_test_scaled, y_test, ids_test, class_labels)
 shap_vals = get_shap_values_for_correct_classification(model, X_train_scaled, X_test_scaled, correct_classification, class_labels)
