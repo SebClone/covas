@@ -7,6 +7,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 import numpy as np
 import pandas as pd
+import random
 import matplotlib.pyplot as plt
 import tensorflow as tf
 from keras.models import Sequential
@@ -24,9 +25,13 @@ from covaslib.covas import get_COVA_matrix, get_COVA_score
 from covaslib.plotting import custom_decision_plot
 
 # Set seeds
+random.seed(100)
 np.random.seed(100)
 tf.random.set_seed(100)
 
+####################################################################
+#---------------Here goes your individual Dataset code-------------#
+####################################################################
 # Load data
 file_path = "/Users/sebastian/Library/Mobile Documents/com~apple~CloudDocs/Uni/Paper/Programmierung/data/FIFA 2018 Statistics.csv"
 data = pd.read_csv(file_path)
@@ -37,13 +42,12 @@ ids['ID'] = data['Team'] + ' ~ ' + data['Date']
 # Select relevant features and drop unnecessary columns
 features = data.drop(columns=['Date', 'Team', 'Opponent', 'Man of the Match', 'Round', 'PSO', 'Goals in PSO', 'Own goal Time'])
 feature_names = features.columns.tolist()
-X = features
-y = data['Man of the Match'] # target variable
-
 # Handle missing values by filling with the mean (for simplicity)
 features = features.fillna(features.mean())
-
+X = features
+y = data['Man of the Match'].values # Target variable as numpy array
 class_labels = ['Not MotM', 'MotM']
+####################################################################
 
 # Split and scale
 X_train, X_test, y_train, y_test, ids_train, ids_test = train_test_split(X, y, ids ,test_size=0.3, random_state=100)
@@ -53,33 +57,18 @@ X_test_scaled = scaler.transform(X_test)
 
 # Train model
 model = Sequential([
-    Dense(32, input_shape=(X_train.shape[1],), kernel_regularizer=l2(0.001)),
-    LeakyReLU(alpha=0.01),
-    BatchNormalization(),
-    Dropout(0.4),
-    Dense(16, kernel_regularizer=l2(0.001)),
-    LeakyReLU(alpha=0.01),
-    Dropout(0.4),
+    Dense(64, input_shape=(X_train.shape[1],), activation='relu'),
+    Dense(32, activation='relu'),
+    Dense(32, activation='relu'),
     Dense(1, activation='sigmoid')
 ])
-
-# Compile the model
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-# Early stopping callback
-early_stopping = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
-# Train the model
-history = model.fit(
-    X_train_scaled, y_train,
-    validation_data=(X_test_scaled, y_test),
-    epochs=150,
-    batch_size=8,
-    callbacks=[early_stopping],
-    verbose=0
-)
-# Evaluate the model on the test data
-test_loss, test_acc = model.evaluate(X_test_scaled, y_test, verbose=0)
 
-print(f"Final Test Accuracy: {test_acc * 100:.2f}%")
+model.fit(X_train_scaled, y_train, validation_data=(X_test_scaled, y_test), epochs=10, batch_size=16)
+
+# Evaluate model
+loss, accuracy = model.evaluate(X_test_scaled, y_test, verbose=0)
+print(f"Test Accuracy: {accuracy:.4f}")
 
 # %%
 # Run full COVAS pipeline
@@ -95,11 +84,13 @@ line_levels = ['mean', '2 std']  # Options: ['mean', '1 std', '2 std', '3 std', 
 fill_levels = ['none']  # Options: ['68%', '95%', '99%', 'all', 'none']
 
 # Example decision plot for the first class
+output_dir = Path(__file__).resolve().parents[1] / 'results'
+
 for class_name in class_labels:
     # Subset feature matrix for correctly classified samples of this class
     indices = correct_classification[class_name]['index'].values
     X_subset = X_test_scaled[indices]
-    custom_decision_plot(
+    fig = custom_decision_plot(
         shap_vals,
         X_subset, feature_names,
         scatter_levels=scatter_levels,
@@ -107,10 +98,13 @@ for class_name in class_labels:
         fill_levels=fill_levels,
         class_name=class_name
     )
-#%%
-# Export individual COVA components per class
-output_dir = Path(__file__).resolve().parents[1] / 'results'
+    fig_path = output_dir / f"decision_plot_{class_name}.png"
+    fig.savefig(fig_path, bbox_inches='tight')
+    plt.close(fig)
+    print(f"Saved decision plot for class '{class_name}' to {fig_path}")
 
+
+# Export individual COVA components per class
 for class_name in class_labels:
     # Score
     score_df = pd.DataFrame(COVA_scores[class_name]['COVAS Score'])

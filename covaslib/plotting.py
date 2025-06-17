@@ -270,3 +270,5 @@ def custom_decision_plot(shap_dictonary, X_test, feature_names,
     else:
         ax.set_title(f"SHAP Decision Plot", fontsize=26)
     plt.show()
+
+    return plt.gcf()  # Return the current figure for further manipulation if needed

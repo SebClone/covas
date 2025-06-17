@@ -4,8 +4,10 @@ import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
+
 import numpy as np
 import pandas as pd
+import random
 import matplotlib.pyplot as plt
 import tensorflow as tf
 from keras.models import Sequential
@@ -20,9 +22,14 @@ from covaslib.covas import get_COVA_matrix, get_COVA_score
 from covaslib.plotting import custom_decision_plot
 
 # Set seeds
+random.seed(100)
 np.random.seed(100)
 tf.random.set_seed(100)
 
+
+####################################################################
+#---------------Here goes your individual Dataset code-------------#
+####################################################################
 # Load data
 data = load_breast_cancer()
 X = data.data
@@ -32,6 +39,9 @@ class_labels = data.target_names.tolist()
 
 ids = pd.DataFrame()
 ids['ID'] = ['patient ' + str(i) for i in range(len(X))] # Create IDs for each sample
+####################################################################
+
+
 
 # Split and scale
 X_train, X_test, y_train, y_test, ids_train, ids_test = train_test_split(X, y, ids ,test_size=0.3, random_state=100)
@@ -39,7 +49,7 @@ scaler = StandardScaler()
 X_train_scaled = scaler.fit_transform(X_train)
 X_test_scaled = scaler.transform(X_test)
 
-# %%
+
 # Train model
 model = Sequential([
     Dense(64, input_shape=(X_train.shape[1],), activation='relu'),
@@ -68,11 +78,13 @@ line_levels = ['mean', '2 std']  # Options: ['mean', '1 std', '2 std', '3 std', 
 fill_levels = ['none']  # Options: ['68%', '95%', '99%', 'all', 'none']
 
 # Example decision plot for the first class
+output_dir = Path(__file__).resolve().parents[1] / 'results'
+
 for class_name in class_labels:
     # Subset feature matrix for correctly classified samples of this class
     indices = correct_classification[class_name]['index'].values
     X_subset = X_test_scaled[indices]
-    custom_decision_plot(
+    fig = custom_decision_plot(
         shap_vals,
         X_subset, feature_names,
         scatter_levels=scatter_levels,
@@ -80,10 +92,12 @@ for class_name in class_labels:
         fill_levels=fill_levels,
         class_name=class_name
     )
+    fig_path = output_dir / f"decision_plot_{class_name}.png"
+    fig.savefig(fig_path, bbox_inches='tight')
+    plt.close(fig)
+    print(f"Saved decision plot for class '{class_name}' to {fig_path}")
 #%%
 # Export individual COVA components per class
-output_dir = Path(__file__).resolve().parents[1] / 'results'
-
 for class_name in class_labels:
     # Score
     score_df = pd.DataFrame(COVA_scores[class_name]['COVAS Score'])
