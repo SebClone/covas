@@ -83,14 +83,11 @@ scatter_levels = ['mean', '2 std']  # Options: ['mean', '1 std', '2 std', '3 std
 line_levels = ['mean', '2 std']  # Options: ['mean', '1 std', '2 std', '3 std', 'all', 'none']
 fill_levels = ['none']  # Options: ['68%', '95%', '99%', 'all', 'none']
 
-# Example decision plot for the first class
-output_dir = Path(__file__).resolve().parents[1] / 'results'
-
 for class_name in class_labels:
     # Subset feature matrix for correctly classified samples of this class
     indices = correct_classification[class_name]['index'].values
     X_subset = X_test_scaled[indices]
-    fig = custom_decision_plot(
+    custom_decision_plot(
         shap_vals,
         X_subset, feature_names,
         scatter_levels=scatter_levels,
@@ -98,11 +95,9 @@ for class_name in class_labels:
         fill_levels=fill_levels,
         class_name=class_name
     )
-    fig_path = output_dir / f"decision_plot_{class_name}.png"
-    fig.savefig(fig_path, bbox_inches='tight')
-    plt.close(fig)
-    print(f"Saved decision plot for class '{class_name}' to {fig_path}")
 
+# Example decision plot for the first class
+output_dir = Path(__file__).resolve().parents[1] / 'results'
 
 # Export individual COVA components per class
 for class_name in class_labels:
