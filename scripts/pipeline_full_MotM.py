@@ -47,6 +47,9 @@ features = features.fillna(features.mean())
 X = features
 y = data['Man of the Match'].values # Target variable as numpy array
 class_labels = ['Not MotM', 'MotM']
+
+# Example decision plot for the first class
+output_dir = Path(__file__).resolve().parents[1] / 'results'
 ####################################################################
 
 # Split and scale
@@ -89,15 +92,17 @@ for class_name in class_labels:
     X_subset = X_test_scaled[indices]
     custom_decision_plot(
         shap_vals,
-        X_subset, feature_names,
+        X_subset,
+        feature_names,
         scatter_levels=scatter_levels,
         line_levels=line_levels,
         fill_levels=fill_levels,
-        class_name=class_name
+        class_name=class_name,
+        save_path=output_dir / f"decision_plot_{class_name}.png",
+        dpi=600,
+        show=False,   # oder True, wenn du sie sehen willst
     )
 
-# Example decision plot for the first class
-output_dir = Path(__file__).resolve().parents[1] / 'results'
 
 # Export individual COVA components per class
 for class_name in class_labels:

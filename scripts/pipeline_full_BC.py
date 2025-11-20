@@ -39,6 +39,9 @@ class_labels = data.target_names.tolist()
 
 ids = pd.DataFrame()
 ids['ID'] = ['patient ' + str(i) for i in range(len(X))] # Create IDs for each sample
+
+# Example decision plot for the first class
+output_dir = Path(__file__).resolve().parents[1] / 'results'
 ####################################################################
 
 
@@ -72,27 +75,31 @@ feat_dist = get_feature_distribution(shap_vals, feature_names)
 COVA_matrices = get_COVA_matrix('continuous', class_labels, shap_vals, feature_names, feat_dist)
 COVA_scores = get_COVA_score(class_labels, COVA_matrices, shap_vals)
 
+
+
 # Plot
 scatter_levels = ['mean', '2 std']  # Options: ['mean', '1 std', '2 std', '3 std', 'all', 'none']   
 line_levels = ['mean', '2 std']  # Options: ['mean', '1 std', '2 std', '3 std', 'all', 'none']
 fill_levels = ['none']  # Options: ['68%', '95%', '99%', 'all', 'none']
 
-
 for class_name in class_labels:
     # Subset feature matrix for correctly classified samples of this class
     indices = correct_classification[class_name]['index'].values
     X_subset = X_test_scaled[indices]
+
     custom_decision_plot(
         shap_vals,
-        X_subset, feature_names,
+        X_subset,
+        feature_names,
         scatter_levels=scatter_levels,
         line_levels=line_levels,
         fill_levels=fill_levels,
-        class_name=class_name
+        class_name=class_name,
+        save_path=output_dir / f"decision_plot_{class_name}.png",
+        dpi=600,
+        show=False,   # oder True, wenn du sie sehen willst
     )
 
-# Example decision plot for the first class
-output_dir = Path(__file__).resolve().parents[1] / 'results'
 
 # Export individual COVA components per class
 for class_name in class_labels:

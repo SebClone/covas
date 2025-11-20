@@ -21,33 +21,45 @@ import matplotlib.pyplot as plt
 import numpy as np
 import shap
 
-def custom_decision_plot(shap_dictonary, X_test, feature_names,
-                         scatter_levels=None, line_levels=None, fill_levels=None, class_name=None):
+def custom_decision_plot(
+        shap_dictonary, X_test, feature_names,
+        scatter_levels=None, line_levels=None, fill_levels=None,
+        class_name=None,
+        save_path=None,
+        dpi=600,
+        show=False,
+):
     """
     Create a custom SHAP decision plot with optional overlays for mean path,
     standard deviation bounds, percentile fills, and scatter markers.
 
     Parameters
     ----------
-    shap_base : float
-        The expected value (base value) from the SHAP explainer.
-    shap_vals : np.ndarray
-        SHAP values for the samples to plot (shape: [samples, features]).
+    shap_dictonary : dict
+        Dictionary mapping class names to SHAP information (must contain 'base value' and 'values' for each class).
     X_test : np.ndarray or pd.DataFrame
         The feature values for the samples (used for SHAP plotting).
     feature_names : list of str
-        List of feature names (order must match shap_vals columns).
+        List of feature names (order must match SHAP value columns).
     scatter_levels : list of str, optional
         Levels at which to plot scatter markers. Options: ['mean', '1 std', '2 std', '3 std', 'all', 'none'].
     line_levels : list of str, optional
         Which lines to draw. Options: ['mean', '1 std', '2 std', '3 std', 'all', 'none'].
     fill_levels : list of str, optional
         Which percentile bands to fill. Options: ['68%', '95%', '99%', 'all', 'none'].
+    class_name : str, optional
+        Name of the class key in `shap_dictonary` to be plotted.
+    save_path : str or pathlib.Path, optional
+        If provided, the figure is saved to this path.
+    dpi : int, optional
+        Resolution in dots per inch used when saving the figure. Default is 600.
+    show : bool, optional
+        If True, displays the figure with plt.show(). Default is False.
 
     Returns
     -------
-    None
-        Displays a matplotlib plot.
+    fig : matplotlib.figure.Figure
+        The matplotlib Figure object containing the plot.
 
     Raises
     ------
@@ -96,7 +108,7 @@ def custom_decision_plot(shap_dictonary, X_test, feature_names,
 
     height_in_inches = 10 #placeholder
     width_in_pixels = 2926
-    DPI = 300
+    DPI = 600
     # Set figure size for plotting, converting width from pixels to inches
     width_in_inches = width_in_pixels / DPI
 
@@ -264,11 +276,19 @@ def custom_decision_plot(shap_dictonary, X_test, feature_names,
     handles, labels = ax.get_legend_handles_labels()
     by_label = dict(zip(labels, handles))
     ax.legend(by_label.values(), by_label.keys(), loc='lower right')
-    # Set plot title based on the class
+
     if class_name is not None:
         ax.set_title(f"SHAP Decision Plot - Class: {class_name}", fontsize=26)
     else:
-        ax.set_title(f"SHAP Decision Plot", fontsize=26)
-    plt.show()
+        ax.set_title("SHAP Decision Plot", fontsize=26)
 
-    return plt.gcf()  # Return the current figure for further manipulation if needed
+    fig = plt.gcf()
+
+    if save_path is not None:
+        fig.savefig(save_path, dpi=dpi, bbox_inches="tight")
+
+    if show:
+        plt.show()
+
+    plt.close(fig)  
+    return fig
