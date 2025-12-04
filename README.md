@@ -22,19 +22,19 @@ This enables the identification of rare, atypical, or informative cases that rem
 ### Install directly from GitHub (recommended once repository is public)
 
 ```bash
-pip install git+https://github.com/<your-username>/<your-repo>.git
+pip install git+https://github.com/SebClone/covas.git
 ```
 
 ### Development installation (editable mode)
 
 ```bash
-pip install -e git+https://github.com/<your-username>/<your-repo>.git#egg=covas
+pip install -e git+https://github.com/SebClone/covas.git#egg=covas
 ```
 
 ### Local installation
 
 ```bash
-git clone https://github.com/<your-username>/<your-repo>.git
+git clone https://github.com/SebClone/covas.git
 cd <your-repo>
 pip install .
 ```
