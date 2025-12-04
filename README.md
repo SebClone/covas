@@ -35,7 +35,7 @@ pip install -e git+https://github.com/SebClone/covas.git#egg=covas
 
 ```bash
 git clone https://github.com/SebClone/covas.git
-cd <your-repo>
+cd covas
 pip install .
 ```
 
