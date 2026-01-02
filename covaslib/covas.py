@@ -151,3 +151,5 @@ def get_COVA_score(class_labels, class_COVA_matrix, shap_values_right_class):
             'IDs': ids_for_class
         }
     return class_COVAS
+
+

@@ -51,31 +51,35 @@ def get_correct_classification(model, X_test_scaled, y_test, test_ids, class_lab
     ValueError
         If input values are invalid or inconsistent.
     """
+
     # Input validation
     if not hasattr(model, "predict"):
         raise TypeError(f"model must have a .predict() method, got {type(model)}")
     if X_test_scaled.shape[0] != len(y_test) or len(y_test) != len(test_ids):
         raise ValueError("Lengths of X_test_scaled, y_test, and test_ids must be equal")
-    if not isinstance(class_labels, list) or not all(isinstance(c, str) for c in class_labels):
-        raise TypeError("class_labels must be a list of strings")
-    # Predict and convert to class labels
-    y_pred_raw = model.predict(X_test_scaled).flatten()
-    y_pred = (y_pred_raw > 0.5).astype(int)
 
-    # Build Series for true and predicted labels, indexed by IDs
+    # --- MODEL-AGNOSTIC PREDICTION ---
+    if hasattr(model, "predict_proba"):
+        y_pred_raw = model.predict_proba(X_test_scaled)
+        y_pred = np.argmax(y_pred_raw, axis=1)
+    else:
+        y_pred = model.predict(X_test_scaled)
+
+    # Build Series indexed by IDs
     y_true = pd.Series(y_test, index=test_ids)
     y_pred_series = pd.Series(y_pred, index=test_ids)
 
     correct_classification = {}
     for class_id, class_name in enumerate(class_labels):
-        # Mask correctly classified instances for this class
         mask_correct = (y_true == class_id) & (y_pred_series == class_id)
         indices = np.where(mask_correct.values)[0]
         ids_list = mask_correct[mask_correct].index.tolist()
-        class_df = pd.DataFrame({
+
+        correct_classification[class_name] = pd.DataFrame({
             'index': indices,
             'ID': ids_list
         })
-        correct_classification[class_name] = class_df
-        print(f"Class '{class_name}': {len(class_df)} correctly classified instances")
+
+        print(f"Class '{class_name}': {len(ids_list)} correctly classified instances")
+
     return correct_classification

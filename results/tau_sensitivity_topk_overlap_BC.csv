@@ -1,0 +1,9 @@
+class,tau_prev,tau_curr,top_k,top_k_overlap
+malignant,1.0,1.5,10,1.0
+malignant,1.5,2.0,10,1.0
+malignant,2.0,2.5,10,0.8
+malignant,2.5,3.0,10,0.8
+benign,1.0,1.5,10,1.0
+benign,1.5,2.0,10,1.0
+benign,2.0,2.5,10,0.8
+benign,2.5,3.0,10,0.9

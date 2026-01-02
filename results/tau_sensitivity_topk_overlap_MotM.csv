@@ -1,0 +1,9 @@
+class,tau_prev,tau_curr,top_k,top_k_overlap
+Not MotM,1.0,1.5,10,1.0
+Not MotM,1.5,2.0,10,0.9
+Not MotM,2.0,2.5,10,0.6
+Not MotM,2.5,3.0,10,0.7
+MotM,1.0,1.5,10,0.9
+MotM,1.5,2.0,10,0.9
+MotM,2.0,2.5,10,0.9
+MotM,2.5,3.0,10,0.9
