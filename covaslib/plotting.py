@@ -476,7 +476,7 @@ def custom_decision_plot_highlight(
     if highlight_id is None:
         ax.set_title(f"SHAP Decision Plot - Class: {class_name}", fontsize=26, fontweight='bold')
     else:
-        ax.set_title(f"SHAP Decision Plot - Class: {class_name} (highlight: {highlight_id})", fontsize=26, fontweight='bold')
+        ax.set_title(f"SHAP Decision Plot - Class: {class_name} \n(highlight: {highlight_id})", fontsize=26, fontweight='bold', pad=10)
 
     fig = plt.gcf()
 
