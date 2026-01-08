@@ -292,3 +292,199 @@ def custom_decision_plot(
 
     plt.close(fig)  
     return fig
+
+
+# ---------------------------------------------------------------------------
+# Custom decision plot with highlight for a single instance path
+def custom_decision_plot_highlight(
+        shap_dictonary, X_test, feature_names,
+        highlight_pos: int,
+        highlight_id: str = None,
+        scatter_levels=None, line_levels=None, fill_levels=None,
+        class_name=None,
+        save_path=None,
+        dpi=600,
+        show=False,
+        highlight_color='black',
+        highlight_linestyle='--',
+        highlight_linewidth=4.0,
+        fade_alpha=0.15,
+):
+    """Create a custom SHAP decision plot with the same overlays as `custom_decision_plot`,
+    but with a single instance decision path highlighted.
+
+    Parameters
+    ----------
+    shap_dictonary : dict
+        Dictionary mapping class names to SHAP information (must contain 'base value' and 'values' for each class).
+    X_test : np.ndarray or pd.DataFrame
+        The feature values for the samples (used for SHAP plotting). Must correspond to the SHAP values for `class_name`.
+    feature_names : list of str
+        List of feature names (order must match SHAP value columns).
+    highlight_pos : int
+        Row index within the class-specific SHAP/value subset to highlight (0-based).
+    highlight_id : str, optional
+        Human-readable identifier to include in the plot title.
+    scatter_levels, line_levels, fill_levels, class_name, save_path, dpi, show
+        Same meaning as in `custom_decision_plot`.
+    highlight_color : str
+        Color used for the highlighted instance path.
+    highlight_linestyle : str
+        Line style used for the highlighted instance path.
+    highlight_linewidth : float
+        Line width used for the highlighted instance path.
+    fade_alpha : float
+        Alpha value applied to all non-highlight paths.
+
+    Returns
+    -------
+    fig : matplotlib.figure.Figure
+        The matplotlib Figure object containing the plot.
+    """
+    # Input validation
+    if class_name not in shap_dictonary:
+        raise ValueError(f"class_name {class_name!r} not found in shap_dictionary keys")
+    if not isinstance(highlight_pos, int) or highlight_pos < 0:
+        raise ValueError("highlight_pos must be a non-negative integer")
+
+    # Retrieve the SHAP base value (expected value) and SHAP values for the given class
+    shap_base = shap_dictonary[class_name]['base value']
+    shap_vals = shap_dictonary[class_name]['values']
+
+    if highlight_pos >= shap_vals.shape[0]:
+        raise ValueError(
+            f"highlight_pos={highlight_pos} is out of range for shap_vals with n={shap_vals.shape[0]}"
+        )
+
+    # Defaults (match behavior of custom_decision_plot)
+    if scatter_levels is None:
+        scatter_levels = []
+    if line_levels is None:
+        line_levels = []
+    if fill_levels is None:
+        fill_levels = []
+
+    if 'all' in scatter_levels:
+        scatter_levels = ['mean', '1 std', '2 std', '3 std']
+    if 'all' in line_levels:
+        line_levels = ['mean', '1 std', '2 std', '3 std']
+    if 'all' in fill_levels:
+        fill_levels = ['68%', '95%', '99%']
+
+    std_map = {'1 std': 1, '2 std': 2, '3 std': 3}
+    std_levels = [std_map[s] for s in line_levels if s in std_map]
+
+    plot_scatter = {'mean': 'mean' in scatter_levels}
+    plot_scatter.update({f'{i} std': (f'{i} std' in scatter_levels) for i in [1, 2, 3]})
+
+    plot_fill = {'1': '68%' in fill_levels, '2': '95%' in fill_levels, '3': '99%' in fill_levels}
+
+    # Figure sizing (same as custom_decision_plot)
+    height_in_inches = 10
+    width_in_pixels = 2926
+    DPI = 600
+    width_in_inches = width_in_pixels / DPI
+
+    plt.figure(figsize=(width_in_inches, height_in_inches))
+
+    # 1) Plot all instances (fade them afterwards)
+    shap.decision_plot(
+        shap_base,
+        shap_vals,
+        X_test,
+        feature_names,
+        show=False,
+        ignore_warnings=True
+    )
+
+    ax = plt.gca()
+
+    # Fade all existing instance paths
+    for ln in ax.lines:
+        ln.set_alpha(fade_alpha)
+        ln.set_linewidth(1.0)
+
+    # 2) Plot only the highlighted instance on top
+    shap.decision_plot(
+        shap_base,
+        shap_vals[highlight_pos:highlight_pos + 1, :],
+        X_test[highlight_pos:highlight_pos + 1, :],
+        feature_names,
+        show=False,
+        ignore_warnings=True
+    )
+
+    ax = plt.gca()
+    hl = ax.lines[-1]
+    hl.set_color(highlight_color)
+    hl.set_linestyle(highlight_linestyle)
+    hl.set_linewidth(highlight_linewidth)
+    hl.set_alpha(1.0)
+
+    # Determine feature order used in the SHAP decision plot
+    order = [tick.get_text() for tick in ax.get_yticklabels() if tick.get_text()]
+    shap_vals_ordered = shap_vals[:, [feature_names.index(f) for f in order]]
+
+    # Compute cumulative SHAP paths for overlays
+    base = shap_base
+    cum_paths = base + np.cumsum(shap_vals_ordered, axis=1)
+    mean_path = np.mean(cum_paths, axis=0)
+    std_path = np.std(cum_paths, axis=0)
+
+    # Plot overlays (same visual conventions as custom_decision_plot)
+    if 'mean' in line_levels:
+        ax.plot(mean_path, range(len(order)), linestyle='-', linewidth=2, zorder=4, color='#333333', label='Mean Path Line')
+
+    if 1 in std_levels:
+        ax.plot(mean_path - std_path, range(len(order)), linestyle='--', linewidth=2, zorder=3, color='#82A582', label='±1 Std Line')
+        ax.plot(mean_path + std_path, range(len(order)), linestyle='--', linewidth=2, zorder=3, color='#82A582', label='_nolegend_')
+    if 1 in std_levels and plot_fill['1']:
+        ax.fill_betweenx(range(len(order)), mean_path - std_path, mean_path + std_path, color='#82A582', alpha=0.4, zorder=4, label='68% Perzentil')
+
+    if 2 in std_levels:
+        ax.plot(mean_path - 2 * std_path, range(len(order)), linestyle='--', linewidth=2, zorder=2, color='#517551', label='±2 Std Line')
+        ax.plot(mean_path + 2 * std_path, range(len(order)), linestyle='--', linewidth=2, zorder=2, color='#517551', label='_nolegend_')
+    if 2 in std_levels and plot_fill['2']:
+        ax.fill_betweenx(range(len(order)), mean_path - 2 * std_path, mean_path + 2 * std_path, color='#517551', alpha=0.4, zorder=4, label='95% Perzentil')
+
+    if 3 in std_levels:
+        ax.plot(mean_path - 3 * std_path, range(len(order)), linestyle='--', linewidth=2, zorder=1, color='#2F4F2F', label='±3 Std Line')
+        ax.plot(mean_path + 3 * std_path, range(len(order)), linestyle='--', linewidth=2, zorder=1, color='#2F4F2F', label='_nolegend_')
+    if 3 in std_levels and plot_fill['3']:
+        ax.fill_betweenx(range(len(order)), mean_path - 3 * std_path, mean_path + 3 * std_path, color='#2F4F2F', alpha=0.4, zorder=4, label='99.7% Perzentil')
+
+    # Scatter markers for mean/std bounds
+    for idx, _feature in enumerate(order):
+        if plot_scatter['mean']:
+            ax.scatter(mean_path[idx], idx, marker='D', s=50, zorder=5, color='#333333', label='Mean Path' if idx == 0 else '_nolegend_')
+
+        if 1 in std_levels and plot_scatter['1 std']:
+            ax.scatter([mean_path[idx] - std_path[idx], mean_path[idx] + std_path[idx]], [idx, idx], marker='X', s=50, zorder=5, color='#82A582', label='±1 Std' if idx == 0 else '_nolegend_')
+
+        if 2 in std_levels and plot_scatter['2 std']:
+            ax.scatter([mean_path[idx] - 2 * std_path[idx], mean_path[idx] + 2 * std_path[idx]], [idx, idx], marker='s', s=50, zorder=5, color='#517551', label='±2 Std' if idx == 0 else '_nolegend_')
+
+        if 3 in std_levels and plot_scatter['3 std']:
+            ax.scatter([mean_path[idx] - 3 * std_path[idx], mean_path[idx] + 3 * std_path[idx]], [idx, idx], marker='^', s=50, zorder=5, color='#2F4F2F', label='±3 Std' if idx == 0 else '_nolegend_')
+
+    # Create a clean legend with unique labels
+    handles, labels = ax.get_legend_handles_labels()
+    by_label = dict(zip(labels, handles))
+    ax.legend(by_label.values(), by_label.keys(), loc='lower right')
+
+    # Title
+    if highlight_id is None:
+        ax.set_title(f"SHAP Decision Plot - Class: {class_name}", fontsize=26, fontweight='bold')
+    else:
+        ax.set_title(f"SHAP Decision Plot - Class: {class_name} (highlight: {highlight_id})", fontsize=26, fontweight='bold')
+
+    fig = plt.gcf()
+
+    if save_path is not None:
+        fig.savefig(save_path, dpi=dpi, bbox_inches="tight")
+
+    if show:
+        plt.show()
+
+    plt.close(fig)
+    return fig

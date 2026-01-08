@@ -1,0 +1,2 @@
+class,seed_ref,seed_cmp,n_common,spearman_rho,spearman_p,topk_overlap
+MotM,0,100,8,,,1.0
