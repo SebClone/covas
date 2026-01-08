@@ -58,12 +58,31 @@ def get_correct_classification(model, X_test_scaled, y_test, test_ids, class_lab
     if X_test_scaled.shape[0] != len(y_test) or len(y_test) != len(test_ids):
         raise ValueError("Lengths of X_test_scaled, y_test, and test_ids must be equal")
 
+    # Normalize y_test to 1D
+    y_test = np.asarray(y_test).reshape(-1)
+
+    # Normalize test_ids to a 1D array of strings (handles DataFrame input)
+    if isinstance(test_ids, pd.DataFrame):
+        if 'ID' in test_ids.columns:
+            test_ids = test_ids['ID'].values
+        elif test_ids.shape[1] == 1:
+            test_ids = test_ids.iloc[:, 0].values
+        else:
+            raise ValueError("test_ids DataFrame must contain a single ID column")
+    test_ids = np.asarray(test_ids).reshape(-1).astype(str)
+
     # --- MODEL-AGNOSTIC PREDICTION ---
     if hasattr(model, "predict_proba"):
-        y_pred_raw = model.predict_proba(X_test_scaled)
-        y_pred = np.argmax(y_pred_raw, axis=1)
+        y_pred_raw = np.asarray(model.predict_proba(X_test_scaled))
+        y_pred = np.argmax(y_pred_raw, axis=1).reshape(-1)
     else:
-        y_pred = model.predict(X_test_scaled)
+        # Keras models often return shape (n, 1); ensure 1D.
+        y_pred_raw = np.asarray(model.predict(X_test_scaled)).reshape(-1)
+        # If the output looks like a probability, threshold at 0.5; otherwise treat as class labels.
+        if np.issubdtype(y_pred_raw.dtype, np.floating) and (y_pred_raw.min() >= 0.0) and (y_pred_raw.max() <= 1.0):
+            y_pred = (y_pred_raw >= 0.5).astype(int)
+        else:
+            y_pred = y_pred_raw.astype(int)
 
     # Build Series indexed by IDs
     y_true = pd.Series(y_test, index=test_ids)

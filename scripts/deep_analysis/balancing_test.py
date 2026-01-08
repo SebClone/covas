@@ -46,9 +46,10 @@ ids = pd.DataFrame({
     'ID': ['patient ' + str(i) for i in range(len(X))]
 })
 
-# Output directory
-output_dir = Path(__file__).resolve().parents[1] / 'results'
-output_dir.mkdir(parents=True, exist_ok=True)
+# Output directories
+results_dir = Path(__file__).resolve().parents[1] / 'results'
+deep_output_dir = results_dir / 'deep_analysis_results'
+deep_output_dir.mkdir(parents=True, exist_ok=True)
 
 
 # ---------------------------------------------------------------------
@@ -121,7 +122,7 @@ for class_name in class_labels:
     if score_df.shape[1] == 1:
         score_df.columns = ['COVAS']
     score_df.index.name = 'ID'
-    score_df.to_csv(output_dir / f'COVA_score_{class_name}_balanced.csv')
+    score_df.to_csv(deep_output_dir / f'COVA_score_{class_name}_balanced.csv')
 
     # Matrix
     matrix_df = pd.DataFrame(
@@ -130,11 +131,11 @@ for class_name in class_labels:
         columns=feature_names
     )
     matrix_df.index.name = 'ID'
-    matrix_df.to_csv(output_dir / f'COVA_matrix_{class_name}_balanced.csv')
+    matrix_df.to_csv(deep_output_dir / f'COVA_matrix_{class_name}_balanced.csv')
 
     # IDs
     ids_df = pd.DataFrame(COVA_scores[class_name]['IDs'], columns=['ID'])
-    ids_df.to_csv(output_dir / f'COVA_IDs_{class_name}_balanced.csv', index=False)
+    ids_df.to_csv(deep_output_dir / f'COVA_IDs_{class_name}_balanced.csv', index=False)
 
     print(f"Exported COVA components for class '{class_name}' (balanced model).")
 
@@ -177,8 +178,10 @@ def compute_topk_overlap(a_ids, b_ids, k: int) -> float:
 
 def compare_balanced_vs_unbalanced(class_name: str, k: int = 10) -> dict:
     """Return paper-ready summary metrics for a given class."""
-    unbalanced_path = output_dir / f"COVA_score_{class_name}.csv"
-    balanced_path = output_dir / f"COVA_score_{class_name}_balanced.csv"
+    # Baseline (unbalanced) files live in the main results directory
+    unbalanced_path = results_dir / f"COVA_score_{class_name}.csv"
+    # Balanced files are exported into deep_analysis_results
+    balanced_path = deep_output_dir / f"COVA_score_{class_name}_balanced.csv"
 
     df_u = _clean_index_as_id(pd.read_csv(unbalanced_path, index_col=0))
     df_b = _clean_index_as_id(pd.read_csv(balanced_path, index_col=0))
@@ -251,7 +254,7 @@ results_df = pd.DataFrame(rows)
 print_paper_summary(results_df)
 
 # Save CSV summary next to other results
-results_df.to_csv(output_dir / 'class_imbalance_summary.csv', index=False)
+results_df.to_csv(deep_output_dir / 'class_imbalance_summary.csv', index=False)
 
 print("\nSaved:")
-print("-", output_dir / 'class_imbalance_summary.csv')
+print("-", deep_output_dir / 'class_imbalance_summary.csv')

@@ -305,10 +305,10 @@ def custom_decision_plot_highlight(
         save_path=None,
         dpi=600,
         show=False,
-        highlight_color='black',
+        highlight_color='gold',
         highlight_linestyle='--',
-        highlight_linewidth=4.0,
-        fade_alpha=0.15,
+        highlight_linewidth=3.0,
+        fade_alpha=0.8,
 ):
     """Create a custom SHAP decision plot with the same overlays as `custom_decision_plot`,
     but with a single instance decision path highlighted.

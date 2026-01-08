@@ -1,0 +1,3 @@
+class,common_samples,top_k,top_k_overlap_rf_vs_ffnn,spearman_rho_rf_vs_ffnn,spearman_p_rf_vs_ffnn
+malignant,16,10,0.8,0.7000000000000001,0.0025350946044319323
+benign,32,10,0.8,0.6634897360703812,3.485905829490976e-05

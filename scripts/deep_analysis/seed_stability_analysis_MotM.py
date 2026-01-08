@@ -54,9 +54,13 @@ X = features
 y = data['Man of the Match'].values # Target variable as numpy array
 class_labels = ['Not MotM', 'MotM']
 
-# Example decision plot for the first class
-output_dir = Path(__file__).resolve().parents[1] / 'results'
-output_dir.mkdir(parents=True, exist_ok=True)
+# Output directories
+results_dir = Path(__file__).resolve().parents[1] / 'results'
+plots_dir = results_dir / 'plots'
+deep_output_dir = results_dir / 'deep_analysis_results'
+results_dir.mkdir(parents=True, exist_ok=True)
+plots_dir.mkdir(parents=True, exist_ok=True)
+deep_output_dir.mkdir(parents=True, exist_ok=True)
 ####################################################################
 
 for seed in SEEDS:
@@ -153,8 +157,8 @@ for class_name in class_labels:
 stability_df = pd.DataFrame(rows)
 print("\nSeed stability rows:", len(stability_df))
 print(stability_df)
-stability_df.to_csv(output_dir / 'seed_stability_MotM.csv', index=False)
-print("\nSeed stability results saved to seed_stability_MotM.csv")
+stability_df.to_csv(deep_output_dir / 'seed_stability_MotM.csv', index=False)
+print("\nSeed stability results saved to", deep_output_dir / 'seed_stability_MotM.csv')
 
 # Export individual COVA components per class
 # for class_name in class_labels:

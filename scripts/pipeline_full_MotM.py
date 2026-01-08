@@ -24,11 +24,9 @@ from covaslib.shap_analysis import get_shap_values_for_correct_classification, g
 from covaslib.covas import get_COVA_matrix, get_COVA_score
 from covaslib.plotting import custom_decision_plot
 
-# Set seeds
-random.seed(100)
-np.random.seed(100)
-tf.random.set_seed(100)
+import time
 
+start_time = time.time()
 ####################################################################
 #---------------Here goes your individual Dataset code-------------#
 ####################################################################
@@ -48,8 +46,11 @@ X = features
 y = data['Man of the Match'].values # Target variable as numpy array
 class_labels = ['Not MotM', 'MotM']
 
-# Example decision plot for the first class
-output_dir = Path(__file__).resolve().parents[1] / 'results'
+# Output directories
+results_dir = Path(__file__).resolve().parents[1] / 'results'
+plots_dir = results_dir / 'plots'
+results_dir.mkdir(parents=True, exist_ok=True)
+plots_dir.mkdir(parents=True, exist_ok=True)
 ####################################################################
 
 # Split and scale
@@ -73,7 +74,7 @@ model.fit(X_train_scaled, y_train, validation_data=(X_test_scaled, y_test), epoc
 loss, accuracy = model.evaluate(X_test_scaled, y_test, verbose=0)
 print(f"Test Accuracy: {accuracy:.4f}")
 
-# %%
+
 # Run full COVAS pipeline
 correct_classification = get_correct_classification(model, X_test_scaled, y_test, ids_test, class_labels)
 shap_vals = get_shap_values_for_correct_classification(model, X_train_scaled, X_test_scaled, correct_classification, class_labels)
@@ -98,7 +99,7 @@ for class_name in class_labels:
         line_levels=line_levels,
         fill_levels=fill_levels,
         class_name=class_name,
-        save_path=output_dir / f"decision_plot_{class_name}.png",
+        save_path=plots_dir / f"decision_plot_{class_name}.png",
         dpi=600,
         show=False,   # oder True, wenn du sie sehen willst
     )
@@ -109,16 +110,19 @@ for class_name in class_labels:
     # Score
     score_df = pd.DataFrame(COVA_scores[class_name]['COVAS Score'])
     score_df.index.name = 'ID'
-    score_df.to_csv(output_dir / f'COVA_score_{class_name}.csv')
+    score_df.to_csv(results_dir / f'COVA_score_{class_name}.csv')
 
     # Matrix
     matrix_df = pd.DataFrame(COVA_scores[class_name]['COVAS Matrix'], index=COVA_scores[class_name]['IDs'], columns=feature_names)
     matrix_df.index.name = 'ID'
-    matrix_df.to_csv(output_dir / f'COVA_matrix_{class_name}.csv')
+    matrix_df.to_csv(results_dir / f'COVA_matrix_{class_name}.csv')
 
     # IDs
     ids_df = pd.DataFrame(COVA_scores[class_name]['IDs'])
-    ids_df.to_csv(output_dir / f'COVA_IDs_{class_name}.csv', index=False)
+    ids_df.to_csv(results_dir / f'COVA_IDs_{class_name}.csv', index=False)
     
     print(f"Exported COVA components for class '{class_name}'")
+end_time = time.time()
+elapsed = end_time - start_time
+print(f"Total pipeline runtime (MotM): {elapsed:.2f} seconds")
 # %%

@@ -38,8 +38,13 @@ class_labels = data.target_names.tolist()
 ids = pd.DataFrame()
 ids['ID'] = ['patient ' + str(i) for i in range(len(X))] # Create IDs for each sample
 
-# Example decision plot for the first class
-output_dir = Path(__file__).resolve().parents[1] / 'results'
+# Output directories
+results_dir = Path(__file__).resolve().parents[1] / 'results'
+plots_dir = results_dir / 'plots'
+deep_output_dir = results_dir / 'deep_analysis_results'
+results_dir.mkdir(parents=True, exist_ok=True)
+plots_dir.mkdir(parents=True, exist_ok=True)
+deep_output_dir.mkdir(parents=True, exist_ok=True)
 ####################################################################
 
 
@@ -134,7 +139,7 @@ for class_name in class_labels:
         line_levels=line_levels,
         fill_levels=fill_levels,
         class_name=class_name,
-        save_path=output_dir / f"rf_decision_plot_{class_name}.png",
+        save_path=plots_dir / f"rf_decision_plot_{class_name}.png",
         dpi=600,
         show=False,   # oder True, wenn du sie sehen willst
     )
@@ -145,16 +150,16 @@ for class_name in class_labels:
     # Score
     score_df = pd.DataFrame(COVA_scores[class_name]['COVAS Score'])
     score_df.index.name = 'ID'
-    score_df.to_csv(output_dir / f'rf_COVA_score_{class_name}.csv')
+    score_df.to_csv(deep_output_dir / f'rf_COVA_score_{class_name}.csv')
 
     # Matrix
     matrix_df = pd.DataFrame(COVA_scores[class_name]['COVAS Matrix'], index=COVA_scores[class_name]['IDs'], columns=feature_names)
     matrix_df.index.name = 'ID'
-    matrix_df.to_csv(output_dir / f'rf_COVA_matrix_{class_name}.csv')
+    matrix_df.to_csv(deep_output_dir / f'rf_COVA_matrix_{class_name}.csv')
 
     # IDs
     ids_df = pd.DataFrame(COVA_scores[class_name]['IDs'])
-    ids_df.to_csv(output_dir / f'rf_COVA_IDs_{class_name}.csv', index=False)
+    ids_df.to_csv(deep_output_dir / f'rf_COVA_IDs_{class_name}.csv', index=False)
     
     print(f"Exported COVA components for class '{class_name}'")
     
@@ -205,14 +210,14 @@ def overlap(a, b):
 
 # Expected FFNN files (produced by your NN pipeline)
 ffnn_files = {
-    'malignant': output_dir / 'COVA_score_malignant.csv',
-    'benign': output_dir / 'COVA_score_benign.csv',
+    'malignant': results_dir / 'COVA_score_malignant.csv',
+    'benign': results_dir / 'COVA_score_benign.csv',
 }
 
 # Random Forest files (produced by this script)
 rf_files = {
-    'malignant': output_dir / 'rf_COVA_score_malignant.csv',
-    'benign': output_dir / 'rf_COVA_score_benign.csv',
+    'malignant': deep_output_dir / 'rf_COVA_score_malignant.csv',
+    'benign': deep_output_dir / 'rf_COVA_score_benign.csv',
 }
 
 k = 10
@@ -257,9 +262,9 @@ for class_name in ['malignant', 'benign']:
     })
 
 comparison_df = pd.DataFrame(rows)
-comparison_df.to_csv(output_dir / 'comparison_RF_vs_FFNN_BC.csv', index=False)
+comparison_df.to_csv(deep_output_dir / 'comparison_RF_vs_FFNN_BC.csv', index=False)
 
-print('Saved RF vs FFNN comparison to:', output_dir / 'comparison_RF_vs_FFNN_BC.csv')
+print('Saved RF vs FFNN comparison to:', deep_output_dir / 'comparison_RF_vs_FFNN_BC.csv')
 print(comparison_df)
 
 

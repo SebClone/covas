@@ -42,8 +42,9 @@ ids = pd.DataFrame()
 ids['ID'] = ['patient ' + str(i) for i in range(len(X))] # Create IDs for each sample
 
 # Example decision plot for the first class
-output_dir = Path(__file__).resolve().parents[1] / 'results'
-output_dir.mkdir(parents=True, exist_ok=True)
+results_dir = Path(__file__).resolve().parents[1] / 'results'
+plots_dir = results_dir / 'plots'
+plots_dir.mkdir(parents=True, exist_ok=True)
 ####################################################################
 
 
@@ -97,7 +98,7 @@ for class_name in class_labels:
         line_levels=line_levels,
         fill_levels=fill_levels,
         class_name=class_name,
-        save_path=output_dir / f"decision_plot_{class_name}.png",
+        save_path=plots_dir / f"decision_plot_{class_name}.png",
         dpi=600,
         show=False,   # oder True, wenn du sie sehen willst
     )
@@ -125,7 +126,7 @@ custom_decision_plot_highlight(
     line_levels=['mean', '2 std'],
     fill_levels=[],
     class_name=highlight_class,
-    save_path=output_dir / f"decision_plot_{highlight_class}_highlight_{highlight_id_str.replace(' ', '_')}.png",
+    save_path=plots_dir / f"decision_plot_{highlight_class}_highlight_{highlight_id_str.replace(' ', '_')}.png",
     dpi=600,
     show=False,
 )
@@ -135,16 +136,16 @@ for class_name in class_labels:
     # Score
     score_df = pd.DataFrame(COVA_scores[class_name]['COVAS Score'])
     score_df.index.name = 'ID'
-    score_df.to_csv(output_dir / f'COVA_score_{class_name}.csv')
+    score_df.to_csv(results_dir / f'COVA_score_{class_name}.csv')
 
     # Matrix
     matrix_df = pd.DataFrame(COVA_scores[class_name]['COVAS Matrix'], index=COVA_scores[class_name]['IDs'], columns=feature_names)
     matrix_df.index.name = 'ID'
-    matrix_df.to_csv(output_dir / f'COVA_matrix_{class_name}.csv')
+    matrix_df.to_csv(results_dir / f'COVA_matrix_{class_name}.csv')
 
     # IDs
     ids_df = pd.DataFrame(COVA_scores[class_name]['IDs'])
-    ids_df.to_csv(output_dir / f'COVA_IDs_{class_name}.csv', index=False)
+    ids_df.to_csv(results_dir / f'COVA_IDs_{class_name}.csv', index=False)
     
     print(f"Exported COVA components for class '{class_name}'")
 # %%

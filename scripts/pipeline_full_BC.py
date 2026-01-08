@@ -19,13 +19,16 @@ from sklearn.datasets import load_breast_cancer
 from covaslib.classification import get_correct_classification
 from covaslib.shap_analysis import get_shap_values_for_correct_classification, get_feature_distribution
 from covaslib.covas import get_COVA_matrix, get_COVA_score
-from covaslib.plotting import custom_decision_plot
+from covaslib.plotting import custom_decision_plot, custom_decision_plot_highlight
+
+import time
 
 # Set seeds
 random.seed(100)
 np.random.seed(100)
 tf.random.set_seed(100)
 
+start_time = time.time()
 
 ####################################################################
 #---------------Here goes your individual Dataset code-------------#
@@ -40,8 +43,11 @@ class_labels = data.target_names.tolist()
 ids = pd.DataFrame()
 ids['ID'] = ['patient ' + str(i) for i in range(len(X))] # Create IDs for each sample
 
-# Example decision plot for the first class
-output_dir = Path(__file__).resolve().parents[1] / 'results'
+# Output directories
+results_dir = Path(__file__).resolve().parents[1] / 'results'
+plots_dir = results_dir / 'plots'
+results_dir.mkdir(parents=True, exist_ok=True)
+plots_dir.mkdir(parents=True, exist_ok=True)
 ####################################################################
 
 
@@ -95,27 +101,57 @@ for class_name in class_labels:
         line_levels=line_levels,
         fill_levels=fill_levels,
         class_name=class_name,
-        save_path=output_dir / f"decision_plot_{class_name}.png",
+        save_path=plots_dir / f"decision_plot_{class_name}.png",
         dpi=600,
         show=False,   # oder True, wenn du sie sehen willst
     )
 
+# Exampletory analysis of patient 3
+highlight_id_str = "patient 3"
+highlight_class = "malignant"
+
+df_cls = correct_classification[highlight_class]
+ids_str = df_cls["ID"].astype(str)
+mask = ids_str.str.contains(highlight_id_str, regex=False)
+
+pos = int(np.where(mask.values)[0][0])
+
+idx = df_cls["index"].values
+X_subset = X_test_scaled[idx]
+
+custom_decision_plot_highlight(
+    shap_dictonary=shap_vals,
+    X_test=X_subset,
+    feature_names=feature_names,
+    highlight_pos=pos,
+    highlight_id=highlight_id_str,
+    scatter_levels=['mean', '2 std'],
+    line_levels=['mean', '2 std'],
+    fill_levels=[],
+    class_name=highlight_class,
+    save_path=plots_dir / f"decision_plot_{highlight_class}_highlight_{highlight_id_str.replace(' ', '_')}.png",
+    dpi=600,
+    show=False,
+)
 
 # Export individual COVA components per class
 for class_name in class_labels:
     # Score
     score_df = pd.DataFrame(COVA_scores[class_name]['COVAS Score'])
     score_df.index.name = 'ID'
-    score_df.to_csv(output_dir / f'COVA_score_{class_name}.csv')
+    score_df.to_csv(results_dir / f'COVA_score_{class_name}.csv')
 
     # Matrix
     matrix_df = pd.DataFrame(COVA_scores[class_name]['COVAS Matrix'], index=COVA_scores[class_name]['IDs'], columns=feature_names)
     matrix_df.index.name = 'ID'
-    matrix_df.to_csv(output_dir / f'COVA_matrix_{class_name}.csv')
+    matrix_df.to_csv(results_dir / f'COVA_matrix_{class_name}.csv')
 
     # IDs
     ids_df = pd.DataFrame(COVA_scores[class_name]['IDs'])
-    ids_df.to_csv(output_dir / f'COVA_IDs_{class_name}.csv', index=False)
+    ids_df.to_csv(results_dir / f'COVA_IDs_{class_name}.csv', index=False)
     
     print(f"Exported COVA components for class '{class_name}'")
+end_time = time.time()
+elapsed = end_time - start_time
+print(f"Total pipeline runtime: {elapsed:.2f} seconds")
 # %%

@@ -1,9 +1,9 @@
-# run_full_covas_pipeline.py
+# pipeline_full_MotM.py
 # Make covaslib discoverable even in VS Code's interactive window
+# %%
 import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parents[1]))
-
 
 import numpy as np
 import pandas as pd
@@ -11,7 +11,10 @@ import random
 import matplotlib.pyplot as plt
 import tensorflow as tf
 from keras.models import Sequential
-from keras.layers import Dense
+from keras.layers import Dense, Dropout, BatchNormalization
+from keras.callbacks import EarlyStopping
+from keras.regularizers import l2
+from keras.layers import LeakyReLU
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.datasets import load_breast_cancer
@@ -23,7 +26,6 @@ from covaslib.shap_analysis import get_shap_values_for_correct_classification, g
 from covaslib.covas import get_COVA_matrix, get_COVA_score
 from covaslib.plotting import custom_decision_plot
 
-
 # -----------------------------------------------------------------------
 # Helper utilities for tau sensitivity analysis
 # -----------------------------------------------------------------------
@@ -33,7 +35,7 @@ def get_top_k_ids(cova_scores, class_name, k):
     scores = np.array(cova_scores[class_name]['COVAS Score']).reshape(-1)
     k = min(k, len(scores))
     top_idx = np.argsort(scores)[::-1][:k]
-    return [ids[i] for i in top_idx]
+    return [str(ids[i]) for i in top_idx]
 
 
 def compute_overlap(a, b):
@@ -42,6 +44,7 @@ def compute_overlap(a, b):
     if len(a_set) == 0:
         return 0.0
     return len(a_set.intersection(set(b))) / float(len(a_set))
+
 
 def get_COVA_matrix_raw(class_labels, shap_values_right_class, feature_names):
     """
@@ -85,24 +88,16 @@ def get_global_feature_distribution(class_labels, shap_values_right_class, featu
 
     return {c: global_dist for c in class_labels}
 
-
-# ---------------------------------------------------------------
-# Feature-wise z-score outlier detection helper
-# ---------------------------------------------------------------
 def get_feature_zscore_outliers(X, ids, top_k):
-    """
-    Identify feature-space outliers using mean absolute z-scores.
-    Returns the IDs of the top-k most extreme samples.
-    """
+    """Identify feature-space outliers using mean absolute z-scores (top-k IDs)."""
     X_z = (X - np.mean(X, axis=0)) / np.std(X, axis=0)
     scores = np.mean(np.abs(X_z), axis=1)
     top_idx = np.argsort(scores)[::-1][:top_k]
     return [str(i) for i in ids.iloc[top_idx]['ID']]
 
+
 def mean_abs_feature_zscore(X, idx):
-    """
-    Compute mean absolute feature-wise z-score for selected sample indices.
-    """
+    """Compute mean absolute feature-wise z-score for selected sample indices."""
     X_sel = X[idx]
     X_z = (X_sel - np.mean(X, axis=0)) / np.std(X, axis=0)
     return float(np.mean(np.abs(X_z)))
@@ -112,32 +107,38 @@ random.seed(100)
 np.random.seed(100)
 tf.random.set_seed(100)
 
-
 ####################################################################
 #---------------Here goes your individual Dataset code-------------#
 ####################################################################
 # Load data
-data = load_breast_cancer()
-X = data.data
-y = data.target
-feature_names = data.feature_names.tolist()
-class_labels = data.target_names.tolist()
-
+file_path = "/Users/sebastian/Library/Mobile Documents/com~apple~CloudDocs/Uni/Paper/Programmierung/data/FIFA 2018 Statistics.csv"
+data = pd.read_csv(file_path)
+data['Own goals'] = data['Own goals'].fillna(0)
+data['Man of the Match'] = data['Man of the Match'].apply(lambda x: 1 if x == 'Yes' else 0)
 ids = pd.DataFrame()
-ids['ID'] = ['patient ' + str(i) for i in range(len(X))] # Create IDs for each sample
+ids['ID'] = data['Team'] + ' ~ ' + data['Date']
+# Select relevant features and drop unnecessary columns
+features = data.drop(columns=['Date', 'Team', 'Opponent', 'Man of the Match', 'Round', 'PSO', 'Goals in PSO', 'Own goal Time'])
+feature_names = features.columns.tolist()
+# Handle missing values by filling with the mean (for simplicity)
+features = features.fillna(features.mean())
+X = features
+y = data['Man of the Match'].values # Target variable as numpy array
+class_labels = ['Not MotM', 'MotM']
 
-# Example decision plot for the first class
-output_dir = Path(__file__).resolve().parents[1] / 'results'
+base_results_dir = Path(__file__).resolve().parents[1] / 'results'
+plots_dir = base_results_dir / 'plots'
+deep_results_dir = base_results_dir / 'deep_analysis_results'
+
+plots_dir.mkdir(parents=True, exist_ok=True)
+deep_results_dir.mkdir(parents=True, exist_ok=True)
 ####################################################################
-
-
 
 # Split and scale
 X_train, X_test, y_train, y_test, ids_train, ids_test = train_test_split(X, y, ids ,test_size=0.3, random_state=100)
 scaler = StandardScaler()
 X_train_scaled = scaler.fit_transform(X_train)
 X_test_scaled = scaler.transform(X_test)
-
 
 # Train model
 model = Sequential([
@@ -154,17 +155,18 @@ model.fit(X_train_scaled, y_train, validation_data=(X_test_scaled, y_test), epoc
 loss, accuracy = model.evaluate(X_test_scaled, y_test, verbose=0)
 print(f"Test Accuracy: {accuracy:.4f}")
 
+# %%
 # Run full COVAS pipeline
 correct_classification = get_correct_classification(model, X_test_scaled, y_test, ids_test, class_labels)
 shap_vals = get_shap_values_for_correct_classification(model, X_train_scaled, X_test_scaled, correct_classification, class_labels)
 feat_dist = get_feature_distribution(shap_vals, feature_names)
-
 COVA_matrices = get_COVA_matrix('continuous', class_labels, shap_vals, feature_names, feat_dist)
 COVA_scores = get_COVA_score(class_labels, COVA_matrices, shap_vals)
 
 
+
 # ---------------------------------------------------------------
-# Threshold (tau) sensitivity analysis (Reviewer 1)
+# Threshold (tau) sensitivity analysis 
 # ---------------------------------------------------------------
 # We vary the z-score threshold tau and analyze how the top-ranked samples and score
 # distributions change. This is a robustness analysis, not hyperparameter tuning.
@@ -221,8 +223,10 @@ for class_name in class_labels:
 sensitivity_df = pd.DataFrame(sensitivity_rows)
 overlap_df = pd.DataFrame(overlap_rows)
 
-sensitivity_df.to_csv(output_dir / 'tau_sensitivity_summary_BC.csv', index=False)
-overlap_df.to_csv(output_dir / 'tau_sensitivity_topk_overlap_BC.csv', index=False)
+sensitivty_csv_path = deep_results_dir / 'tau_sensitivity_summary_MotM.csv'
+overlap_csv_path = deep_results_dir / 'tau_sensitivity_topk_overlap_MotM.csv'
+sensitivity_df.to_csv(sensitivty_csv_path, index=False)
+overlap_df.to_csv(overlap_csv_path, index=False)
 
 print('Saved tau sensitivity analysis results')
 
@@ -267,8 +271,8 @@ for class_name in class_labels:
 ablation_overlap_df = pd.DataFrame(ablation_overlap_rows)
 ablation_spearman_df = pd.DataFrame(ablation_spearman_rows)
 
-ablation_overlap_df.to_csv(output_dir / 'ablation_z_vs_raw_topk_overlap_BC.csv', index=False)
-ablation_spearman_df.to_csv(output_dir / 'ablation_z_vs_raw_spearman_BC.csv', index=False)
+ablation_overlap_df.to_csv(deep_results_dir / 'ablation_z_vs_raw_topk_overlap_MotM.csv', index=False)
+ablation_spearman_df.to_csv(deep_results_dir / 'ablation_z_vs_raw_spearman_MotM.csv', index=False)
 
 print('Saved Ablation A (z vs raw) results')
 
@@ -318,11 +322,11 @@ for class_name in class_labels:
     })
 
 pd.DataFrame(ablationB_overlap).to_csv(
-    output_dir / 'ablation_std_vs_global_topk_overlap_BC.csv',
+    deep_results_dir / 'ablation_std_vs_global_topk_overlap_MotM.csv',
     index=False
 )
 pd.DataFrame(ablationB_spearman).to_csv(
-    output_dir / 'ablation_std_vs_global_spearman_BC.csv',
+    deep_results_dir / 'ablation_std_vs_global_spearman_MotM.csv',
     index=False
 )
 
@@ -332,11 +336,6 @@ print('Saved Ablation B (std vs global) results')
 # ---------------------------------------------------------------
 # Comparison with feature-space outlier methods
 # ---------------------------------------------------------------
-
-# We compare COVAS with classical feature-space outlier methods:
-# (i) Local Outlier Factor (LOF)
-# (ii) Feature-wise z-score aggregation
-# All methods are constrained to identify the same number of outliers (top-k).
 
 comparison_rows = []
 
@@ -368,7 +367,7 @@ covas_top_ids = list(covas_ids_all[covas_top_idx])
 
 # --- LOF
 lof = LocalOutlierFactor(n_neighbors=20)
-lof_scores = -lof.fit_predict(X_all)  # binary labels (-1 outliers)
+lof.fit(X_all)
 lof_factor = -lof.negative_outlier_factor_
 lof_top_idx = np.argsort(lof_factor)[::-1][:top_k]
 lof_top_ids = [str(i) for i in ids_all.iloc[lof_top_idx]['ID']]
@@ -389,7 +388,7 @@ comparison_rows.append({
 })
 
 comparison_df = pd.DataFrame(comparison_rows)
-comparison_df.to_csv(output_dir / 'comparison_LOF_zscore_vs_COVAS_BC.csv', index=False)
+comparison_df.to_csv(deep_results_dir / 'comparison_LOF_zscore_vs_COVAS_MotM.csv', index=False)
 
 print('Saved comparison with LOF and z-score outliers')
 
@@ -421,9 +420,10 @@ extremeness_rows.append({
 })
 
 extremeness_df = pd.DataFrame(extremeness_rows)
-extremeness_df.to_csv(output_dir / 'feature_space_extremeness_BC.csv', index=False)
+extremeness_df.to_csv(deep_results_dir / 'feature_space_extremeness_MotM.csv', index=False)
 
 print('Saved feature-space extremeness analysis')
+
 
 # Plot
 scatter_levels = ['mean', '2 std']  # Options: ['mean', '1 std', '2 std', '3 std', 'all', 'none']   
@@ -434,7 +434,6 @@ for class_name in class_labels:
     # Subset feature matrix for correctly classified samples of this class
     indices = correct_classification[class_name]['index'].values
     X_subset = X_test_scaled[indices]
-
     custom_decision_plot(
         shap_vals,
         X_subset,
@@ -443,7 +442,7 @@ for class_name in class_labels:
         line_levels=line_levels,
         fill_levels=fill_levels,
         class_name=class_name,
-        save_path=output_dir / f"decision_plot_{class_name}.png",
+        save_path=plots_dir / f"decision_plot_{class_name}.png",
         dpi=600,
         show=False,   # oder True, wenn du sie sehen willst
     )
@@ -454,16 +453,16 @@ for class_name in class_labels:
     # Score
     score_df = pd.DataFrame(COVA_scores[class_name]['COVAS Score'])
     score_df.index.name = 'ID'
-    score_df.to_csv(output_dir / f'COVA_score_{class_name}.csv')
+    score_df.to_csv(base_results_dir / f'COVA_score_{class_name}.csv')
 
     # Matrix
     matrix_df = pd.DataFrame(COVA_scores[class_name]['COVAS Matrix'], index=COVA_scores[class_name]['IDs'], columns=feature_names)
     matrix_df.index.name = 'ID'
-    matrix_df.to_csv(output_dir / f'COVA_matrix_{class_name}.csv')
+    matrix_df.to_csv(base_results_dir / f'COVA_matrix_{class_name}.csv')
 
     # IDs
     ids_df = pd.DataFrame(COVA_scores[class_name]['IDs'])
-    ids_df.to_csv(output_dir / f'COVA_IDs_{class_name}.csv', index=False)
+    ids_df.to_csv(base_results_dir / f'COVA_IDs_{class_name}.csv', index=False)
     
     print(f"Exported COVA components for class '{class_name}'")
 # %%
