@@ -99,10 +99,18 @@ examples/
 - matplotlib
 
 ## Citation
-
-```
-Comming soon...
-```
+@Article{COVAS,
+AUTHOR = {Roth, Sebastian and Cerrito, Adrien and Orth, Samuel and Hartmann, Ulrich and Friemert, Daniel},
+TITLE = {COVAS: Highlighting the Importance of Outliers in Classification Through Explainable AI},
+JOURNAL = {Machine Learning and Knowledge Extraction},
+VOLUME = {8},
+YEAR = {2026},
+NUMBER = {1},
+ARTICLE-NUMBER = {24},
+URL = {https://www.mdpi.com/2504-4990/8/1/24},
+ISSN = {2504-4990},
+DOI = {10.3390/make8010024}
+}
 
 ## License
 
