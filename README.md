@@ -19,7 +19,7 @@ This enables the identification of rare, atypical, or informative cases that rem
 
 ## Installation
 
-### Install directly from GitHub (recommended once repository is public)
+### Install directly from GitHub
 
 ```bash
 pip install git+https://github.com/SebClone/covas.git
